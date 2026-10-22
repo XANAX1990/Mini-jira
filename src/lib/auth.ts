@@ -7,7 +7,6 @@ import { authConfig } from "./auth.config";
 export const { auth, signIn, signOut, handlers } = NextAuth({
   ...authConfig,
   callbacks: {
-    ...authConfig.callbacks,
     async signIn({ user }) {
       // GitHub accounts with no visible email can't be matched to a User.
       return !!user.email;
