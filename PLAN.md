@@ -212,7 +212,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Verify**
 - [x] `npm test` passes (40 tests).
 - [ ] Production: sign in, create project, create issues, drag cards, manage members. All work.
-- [ ] No secrets in the repo (`git log -p | grep -i -E "mongodb(\+srv)?://|secret"` returns nothing sensitive).
+- [x] No secrets in the repo (checked before the first push: none of the four real values from `.env.local` appears in any commit or tracked file; the grep only matches variable names in `.env.example` and the docs).
 
 ---
 
