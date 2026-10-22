@@ -151,10 +151,13 @@ The database is mocked, so these tests check the logic and the shape of the quer
 ## Deploying (Vercel)
 
 1. Push the repo to GitHub and import it in Vercel (framework: Next.js, default settings).
-2. Add the four environment variables above in *Project → Settings → Environment Variables*.
-3. In the GitHub OAuth App, add the production callback `https://<your-app>.vercel.app/api/auth/callback/github` (or use a separate OAuth App for production).
+2. Add the four environment variables above in *Project → Settings → Environment Variables*. In each row the name goes in **Key** and only the value in **Value** (no `MONGODB_URI=` in front of it). Use a **separate database name for production** in `MONGODB_URI` (this deployment uses `mini-jira-prod`, local development uses `mini-jira`), and a new `AUTH_SECRET`.
+3. Create a separate GitHub OAuth App for production with the callback `https://<your-production-domain>/api/auth/callback/github` and use its ID and secret in Vercel. Do not set `AUTH_URL`; Auth.js takes the host from the request.
 4. In Atlas → *Network Access*, allow Vercel. Vercel has no fixed IP on the free plan, so use `0.0.0.0/0` and rely on the database user's password.
-5. Redeploy, sign in, and (optional) seed demo data from your machine with `npm run seed -- your@email`.
+5. Redeploy, then open the **production domain** (*Settings → Domains*) and sign in there. The long per-deployment URLs (`<project>-<hash>-<team>.vercel.app`) are behind Vercel Authentication and break the OAuth round trip.
+6. Optional: seed demo data from your machine by pointing `MONGODB_URI` in `.env.local` at the production database for one run of `npm run seed -- your@email`, then put it back.
+
+After changing `AUTH_SECRET`, everyone is signed out; clear the site's cookies before testing sign-in again.
 
 ## Troubleshooting
 
@@ -165,6 +168,8 @@ The database is mocked, so these tests check the logic and the shape of the quer
 | `bad auth : authentication failed` | Wrong DB user / password, or `<` `>` left around the password | Reset the password under Atlas → Database Access. Avoid `@ : / # ? %` in it. Restart `npm run dev`. |
 | `Missing MONGODB_URI` | The line is missing `MONGODB_URI=`, the file isn't saved, or the server wasn't restarted | Fix `.env.local`, then restart the dev server (env is only read on startup). |
 | GitHub says `redirect_uri_mismatch` | The OAuth App's callback URL does not match the address you are using | Set it to `http://localhost:3000/api/auth/callback/github` (or your production URL). |
+| `MongoParseError: Invalid scheme` on Vercel | The *Value* of `MONGODB_URI` contains `MONGODB_URI=mongodb+srv://...` instead of just the URI | Put only `mongodb+srv://...` in Value, redeploy. |
+| Signing in on the live site returns to the login page, or the callback logs `InvalidCheck: pkceCodeVerifier ... could not be parsed` | Usually a host mismatch (you started on a per-deployment URL, not the production domain) or old cookies from before an `AUTH_SECRET` change. That message also wraps "cookie was missing". | Open the production domain by typing it, clear the site's cookies, sign in again. |
 | `npm error ENOENT ... package.json` when running a script | You ran the command outside the project folder | `cd` into `mini-jira` first. |
 
 ## Project structure
@@ -191,6 +196,9 @@ docs/screenshots/              # images used in this README
 - **Fractional ordering beats renumbering.** Storing a float `order` makes a drag a one-document write. The edge cases are what take the time: dropping at the top or bottom, an empty column, and renumbering when the gap runs out. Letting the server compute the value from the neighbours (and not trusting a client-sent number) keeps it consistent.
 - **Authorization belongs on the server, and atomically.** Every action re-checks the session and role, treats non-members as "not found", and puts rules like "keep one admin" in the query itself instead of read-then-write.
 - **Cache Components wants a loading boundary for every segment you navigate into.** `next build` was clean while the browser console complained, so I found it by clicking through every page from each sibling.
+- **A green build can still hide a red runtime log.** Auth.js touching `crypto` during a prerender (`crypto.getRandomValues()` errors) never showed up in `next build`, only in the logs of the running server. Now I build, start, request every route signed in and signed out, and read the log. Pages that don't need a session (landing, login) stay static and the signed-in redirect lives in `proxy.ts`.
+- **The same code behaves differently on https.** Auth.js names the session cookie `__Secure-authjs.session-token` on https. My proxy looked for the http name, so on Vercel it never saw a session and sign-in went round in circles while everything worked on localhost. The fix is small; the lesson is to test auth over https too and to keep a regression test for it.
+- **Deploy details cost the most time.** A `KEY=` pasted into a Vercel value (`MongoParseError: Invalid scheme`), per-deployment URLs sitting behind Vercel SSO, rotating `AUTH_SECRET` invalidating every cookie, and keeping a separate production database were all small mistakes with confusing symptoms. Writing each one down in `LESSONS.md` made the next one quicker.
 - **Touch and drag fight each other.** A long press on a link inside a scrolling area is unreliable across phones; a dedicated drag handle with `touch-action: none` works everywhere.
 
 ## License
