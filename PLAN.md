@@ -100,10 +100,10 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] Non-members visiting `/projects/XYZ` get a 404.
 
 **Verify**
-- [ ] Create a project → it shows in the list with role Admin.
-- [ ] Creating a second project with the same key shows a validation error and no crash.
-- [ ] Signed in as a different GitHub account (or by manually removing myself from `members` in Atlas), the project URL returns 404.
-- [ ] Global checks pass.
+- [x] Create a project → it shows in the list with role Admin.
+- [x] Creating a second project with the same key shows a validation error and no crash.
+- [x] Signed in as a different GitHub account (or by manually removing myself from `members` in Atlas), the project URL returns 404.
+- [x] Global checks pass.
 
 ---
 
