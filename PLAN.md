@@ -232,21 +232,21 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - Keep `/` and `/login` static (no session reads in the page; see LESSONS.md). Auth errors go to `/login?error=...` and a small client component shows a message.
 
 **Tasks**
-- [ ] `src/lib/auth-callbacks.ts`: `isSignInAllowed` (email required; Google needs `email_verified === true`) and `upsertUser` (by lower-cased email, safe when two sign-ins race), used by `src/lib/auth.ts`.
-- [ ] Google provider in `src/lib/auth.config.ts`, enabled only when both env vars are set (`src/lib/providers.ts`). `pages.error` points at `/login`.
-- [ ] Server action `signInWithGoogle`; login page and landing page show two buttons ("Sign in with GitHub", "Sign in with Google"); friendly error message from `?error=`.
-- [ ] `.env.example`: `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`. README: features, env table, Google OAuth setup, deploy step, troubleshooting, design decision.
-- [ ] Unit tests for `isSignInAllowed` and `upsertUser`.
+- [x] `src/lib/auth-callbacks.ts`: `isSignInAllowed` (email required; Google needs `email_verified === true`) and `upsertUser` (by lower-cased email, safe when two sign-ins race), used by `src/lib/auth.ts`.
+- [x] Google provider in `src/lib/auth.config.ts`, enabled only when both env vars are set (`src/lib/providers.ts`). `pages.error` points at `/login`.
+- [x] Server action `signInWithGoogle`; login page and landing page show two buttons ("Sign in with GitHub", "Sign in with Google"); friendly error message from `?error=`.
+- [x] `.env.example`: `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`. README: features, env table, Google OAuth setup, deploy step, troubleshooting, design decision.
+- [x] Unit tests for `isSignInAllowed` and `upsertUser`.
 
 **Needs from me:** a Google OAuth client (Google Cloud Console → APIs & Services → OAuth consent screen, then Credentials → OAuth client ID → Web application) with the redirect URIs `http://localhost:3000/api/auth/callback/google` and `https://mini-jira-tan.vercel.app/api/auth/callback/google`; put the ID and secret in `.env.local` and in Vercel. The agent will give the exact steps in its report.
 
 **Verify**
-- [ ] `npm run build && npm start` with the Google env vars set: `/` and `/login` are still static, show both buttons, and the server log has no errors. Without the env vars only the GitHub button shows.
-- [ ] The Google sign-in redirect sets the PKCE/state cookies (`__Secure-` names on https) and points at `accounts.google.com` with the right `redirect_uri`.
-- [ ] Same email through GitHub and then Google (or the reverse): exactly one document in `users`, same `_id`, same projects visible. Checked with the real upsert code against the database, and by hand with real accounts.
-- [ ] A Google account with `email_verified: false` is refused (unit test, and a message on `/login`).
+- [x] `npm run build && npm start` with the Google env vars set: `/` and `/login` are still static (`○`), show both buttons, and the server log has no errors. With the variables forced empty only the GitHub button shows and the server lists only the `github` provider. Accessibility 100 on `/` and `/login` (light/dark).
+- [x] The Google sign-in redirect sets the PKCE cookie (`__Secure-authjs.pkce.code_verifier` on https; Google's flow has no separate state cookie) and points at `accounts.google.com` with the right `redirect_uri`. Google accepts both of the owner's redirect URIs (localhost and production); a bogus one is refused with `redirect_uri_mismatch`.
+- [ ] Same email through GitHub and then Google (or the reverse): exactly one document in `users`, same `_id`, same projects visible. **Done with the real upsert code against the database** (GitHub then Google, Google then GitHub, 8 simultaneous first sign-ins: one document, one `_id`, project still visible). **Still to do by hand with real accounts.**
+- [x] A Google account with `email_verified: false` is refused (unit tests incl. missing, non-boolean and `"true"`; mutation-checked) and `/login?error=AccessDenied` shows a message. Not exercised end to end: Auth.js turning a `false` from the signIn callback into `?error=AccessDenied` (documented behavior, needs a real unverified Google account).
 - [ ] Sign in with Google works on localhost with a real Google account.
-- [ ] Global checks pass.
+- [x] Global checks pass (tsc, lint, 62 tests, build).
 
 ---
 

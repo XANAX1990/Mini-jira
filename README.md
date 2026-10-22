@@ -16,7 +16,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 
 | Feature | Status |
 |---|---|
-| Sign in with GitHub (Auth.js, JWT sessions) | ✅ |
+| Sign in with GitHub or Google (Auth.js, JWT sessions); the same verified email is the same user | ✅ |
 | Projects with short keys (e.g. `MJ` → `MJ-1`, `MJ-2`) | ✅ |
 | Issues: create / edit / delete, type, priority, assignee | ✅ |
 | Kanban board with drag & drop (To do / In progress / Done), mouse, touch and keyboard | ✅ |
@@ -31,7 +31,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 - **Framework:** Next.js 16 (App Router, Server Actions, Cache Components, Turbopack), React 19, TypeScript
 - **Styling:** Tailwind CSS 4
 - **Database:** MongoDB Atlas + Mongoose
-- **Auth:** Auth.js v5 (GitHub OAuth, JWT sessions, no database adapter)
+- **Auth:** Auth.js v5 (GitHub OAuth and Google OIDC, JWT sessions, no database adapter)
 - **Drag & drop:** dnd-kit
 - **Validation:** Zod
 - **Tests:** Vitest
@@ -87,6 +87,7 @@ A project must always have at least one admin. The last admin cannot be demoted 
 
 ## Design decisions
 
+- **Accounts are linked by email, so only verified emails count.** There is no database adapter, so Auth.js does no linking of its own: a `users` document is upserted by lower-cased email on every sign-in, whichever provider it came from. Same email through GitHub and Google gives the same `_id`, so memberships and issues follow the person. A Google account is accepted only when `email_verified` is `true`. Auth.js' GitHub provider takes the primary email without checking `verified`; GitHub only lets a verified address be primary, and I rely on that. The name and avatar shown are the ones from the provider used last.
 - **Roles live on the project, not on the user.** The same person can be an admin in one project and a member in another.
 - **Issue numbers come from an atomic counter.** Creating an issue runs `$inc` on `Project.issueCounter` and uses the returned value. Numbers are never reused after a delete. The unique index catches anything that slips through.
 - **Card order is a float, computed on the server.** A card dropped between two others gets the midpoint of their `order` values, so a move updates **one** document instead of renumbering the column. The client only says which two cards it landed between; the server reads their current values. When the gap gets below 0.001 (after about 20 drops into the same spot), the column is renumbered once in a single `bulkWrite`.
@@ -103,6 +104,7 @@ A project must always have at least one admin. The last admin cannot be demoted 
 - Node.js 20.9+
 - A MongoDB Atlas cluster (free M0 is fine)
 - A GitHub OAuth App (callback URL `http://localhost:3000/api/auth/callback/github`)
+- Optional: a Google OAuth client (see *Sign in with Google* below). Without it the Google button is hidden.
 
 ### Setup
 
@@ -124,8 +126,18 @@ Open http://localhost:3000 and sign in with GitHub. Atlas must allow your IP und
 | `AUTH_SECRET` | Random secret for signing sessions (`npx auth secret`) |
 | `AUTH_GITHUB_ID` | GitHub OAuth App client ID |
 | `AUTH_GITHUB_SECRET` | GitHub OAuth App client secret |
+| `AUTH_GOOGLE_ID` | Optional. Google OAuth client ID (ends in `.apps.googleusercontent.com`) |
+| `AUTH_GOOGLE_SECRET` | Optional. Google OAuth client secret. The Google button shows only when both Google variables are set. |
 
 Never commit `.env.local`. It is already in `.gitignore`.
+
+### Sign in with Google (optional)
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/) create or pick a project. *APIs & Services → OAuth consent screen*: user type **External**, fill in the app name and your email, scopes `openid`, `email`, `profile`. While the app is in **Testing**, add your Google account under *Test users* (only they can sign in until you publish the app).
+2. *Credentials → Create credentials → OAuth client ID → Web application*. Add the **Authorized redirect URIs**: `http://localhost:3000/api/auth/callback/google` and, for production, `https://<your-production-domain>/api/auth/callback/google`.
+3. Put the client ID and secret in `.env.local` as `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` (and in Vercel for production), then restart the server. The static landing and login pages read these at build time, so on Vercel the new variables need a redeploy.
+
+The same email through GitHub and Google is **one user**: they get the same projects. Google sign-ins are refused unless Google reports the email as verified.
 
 ### Scripts
 
@@ -139,11 +151,12 @@ Never commit `.env.local`. It is already in `.gitignore`.
 
 ## Testing
 
-`npm test` runs 51 unit tests:
+`npm test` runs 62 unit tests:
 
 - `src/lib/order.test.ts`: midpoint, top, bottom and empty column; when a rebalance is needed (exactly after 20 halvings); renumbering in a single `bulkWrite`; 60 cards dropped into the same gap stay in order.
 - `src/lib/permissions.test.ts`: member, admin and non-member for `getMembership`, `requireMember`, `requireAdmin` and the non-throwing variants used by Server Actions.
 - `src/proxy.test.ts`: the signed-in / signed-out redirects with real tokens, on https (cookie `__Secure-authjs.session-token`), on http, and behind a proxy. This is the regression test for a production-only login loop.
+- `src/lib/auth-callbacks.test.ts`: only verified Google emails get in, no email means no sign-in, GitHub and Google with the same email (any casing) look up the same document, an avatar is not blanked by a provider without one, and a lost race on the unique email index is retried.
 - `src/actions/members.test.ts`: the last-admin guard when demoting and removing, adding by email, issues unassigned when a member is removed.
 
 The database is mocked, so these tests check the logic and the shape of the queries, not MongoDB itself. I checked the real behavior (including two admins demoting each other at the same time, and 60 drops into one gap) against Atlas by hand. There is no browser end-to-end test in the repo.
@@ -153,6 +166,7 @@ The database is mocked, so these tests check the logic and the shape of the quer
 1. Push the repo to GitHub and import it in Vercel (framework: Next.js, default settings).
 2. Add the four environment variables above in *Project → Settings → Environment Variables*. In each row the name goes in **Key** and only the value in **Value** (no `MONGODB_URI=` in front of it). Use a **separate database name for production** in `MONGODB_URI` (this deployment uses `mini-jira-prod`, local development uses `mini-jira`), and a new `AUTH_SECRET`.
 3. Create a separate GitHub OAuth App for production with the callback `https://<your-production-domain>/api/auth/callback/github` and use its ID and secret in Vercel. Do not set `AUTH_URL`; Auth.js takes the host from the request.
+   Optional, for Google: add `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` to Vercel too, and add `https://<your-production-domain>/api/auth/callback/google` as an authorized redirect URI of the Google client. Until both variables exist (and the site is redeployed) the Google button stays hidden.
 4. In Atlas → *Network Access*, allow Vercel. Vercel has no fixed IP on the free plan, so use `0.0.0.0/0` and rely on the database user's password.
 5. Redeploy, then open the **production domain** (*Settings → Domains*) and sign in there. The long per-deployment URLs (`<project>-<hash>-<team>.vercel.app`) are behind Vercel Authentication and break the OAuth round trip.
 6. Optional: seed demo data from your machine by pointing `MONGODB_URI` in `.env.local` at the production database for one run of `npm run seed -- your@email`, then put it back.
@@ -170,6 +184,9 @@ After changing `AUTH_SECRET`, everyone is signed out; clear the site's cookies b
 | GitHub says `redirect_uri_mismatch` | The OAuth App's callback URL does not match the address you are using | Set it to `http://localhost:3000/api/auth/callback/github` (or your production URL). |
 | `MongoParseError: Invalid scheme` on Vercel | The *Value* of `MONGODB_URI` contains `MONGODB_URI=mongodb+srv://...` instead of just the URI | Put only `mongodb+srv://...` in Value, redeploy. |
 | Signing in on the live site returns to the login page, or the callback logs `InvalidCheck: pkceCodeVerifier ... could not be parsed` | Usually a host mismatch (you started on a per-deployment URL, not the production domain) or old cookies from before an `AUTH_SECRET` change. That message also wraps "cookie was missing". | Open the production domain by typing it, clear the site's cookies, sign in again. |
+| Google shows `Error 400: redirect_uri_mismatch` | The redirect URI is not in the Google client's *Authorized redirect URIs* | Add `http://localhost:3000/api/auth/callback/google` (and the production one), exactly, no trailing slash. |
+| Google says "Access blocked" or the app has not completed verification | The OAuth consent screen is in *Testing* and your account is not a test user | Add your Google account under *OAuth consent screen → Test users*, or publish the app. |
+| `/login?error=AccessDenied` after Google sign-in | The Google account's email is not verified (or has no email) | Use an account with a verified email; nothing is created for it. |
 | `npm error ENOENT ... package.json` when running a script | You ran the command outside the project folder | `cd` into `mini-jira` first. |
 
 ## Project structure

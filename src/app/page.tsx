@@ -1,4 +1,4 @@
-import { SignInButton } from "@/components/SignInButton";
+import { SignInButtons } from "@/components/SignInButtons";
 
 // Static page: signed-in visitors are redirected to /projects by src/proxy.ts.
 export default function Home() {
@@ -8,7 +8,7 @@ export default function Home() {
       <p className="max-w-md text-zinc-600 dark:text-zinc-400">
         A lightweight issue tracker with a drag-and-drop Kanban board and per-project roles.
       </p>
-      <SignInButton />
+      <SignInButtons />
     </main>
   );
 }

@@ -1,30 +1,19 @@
 import NextAuth from "next-auth";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { connectDB } from "@/lib/db";
-import { UserModel } from "@/models/User";
+import { isSignInAllowed, upsertUser } from "@/lib/auth-callbacks";
 import { authConfig } from "./auth.config";
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
   ...authConfig,
   callbacks: {
-    async signIn({ user }) {
-      // GitHub accounts with no visible email can't be matched to a User.
-      return !!user.email;
+    async signIn({ user, account, profile }) {
+      return isSignInAllowed({ user, account, profile });
     },
     async jwt({ token, user }) {
-      // `user` is only set on the sign-in request: upsert and keep the Mongo _id.
+      // `user` is only set on the sign-in request: upsert by email and keep the Mongo _id.
       if (user?.email) {
-        await connectDB();
-        const doc = await UserModel.findOneAndUpdate(
-          { email: user.email.toLowerCase() },
-          {
-            $set: { name: user.name ?? user.email, image: user.image ?? undefined },
-            $setOnInsert: { email: user.email.toLowerCase() },
-          },
-          { upsert: true, returnDocument: "after" }
-        );
-        token.id = doc._id.toString();
+        token.id = await upsertUser({ name: user.name ?? user.email, email: user.email, image: user.image });
       }
       return token;
     },
