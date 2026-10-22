@@ -8,7 +8,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 2: Authentication (GitHub OAuth)
 - [x] Phase 3: Projects & permissions core
 - [x] Phase 4: Issues CRUD
-- [ ] Phase 5: Kanban board (drag & drop)
+- [x] Phase 5: Kanban board (drag & drop)
 - [ ] Phase 6: Members & roles management
 - [ ] Phase 7: Polish (filters, search, UX states, seed data)
 - [ ] Phase 8: Tests, deploy, docs
@@ -134,15 +134,15 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Goal:** Drag cards within and across the three columns, with instant feedback and correct persistence.
 
 **Tasks**
-- [ ] Install `@dnd-kit/core` and `@dnd-kit/sortable`.
-- [ ] Board Server Component loads all issues of the project in one query (uses the `{ projectId, status, order }` index), grouped into `todo`, `in_progress`, `done`.
-- [ ] Client `Board` → `Column` → `IssueCard` (key-number, title, type badge, priority, assignee avatar). Clicking a card opens the issue detail.
-- [ ] `src/lib/order.ts`: `orderBetween(before?, after?)`: midpoint; top of column = `after - 1000`; bottom = `before + 1000`; empty = 1000.
-- [ ] Action `moveIssue(projectKey, number, { status, beforeNumber?, afterNumber? })`: member; compute the new `order` **on the server** from the neighbours' current values (don't trust a client-sent `order`); update the one issue.
-- [ ] **Rebalance:** if the gap between neighbours is < 0.001, renumber that column to 1000, 2000, 3000… in one `bulkWrite`, then place the card.
-- [ ] Optimistic update with `useOptimistic`; roll back and show an error toast if the action fails.
-- [ ] Quick "+ Add issue" at the top of the To do column.
-- [ ] Keyboard-accessible dragging (dnd-kit keyboard sensor).
+- [x] Install `@dnd-kit/core` and `@dnd-kit/sortable`.
+- [x] Board Server Component loads all issues of the project in one query (uses the `{ projectId, status, order }` index), grouped into `todo`, `in_progress`, `done`.
+- [x] Client `Board` → `Column` → `IssueCard` (key-number, title, type badge, priority, assignee avatar). Clicking a card opens the issue detail.
+- [x] `src/lib/order.ts`: `orderBetween(before?, after?)`: midpoint; top of column = `after - 1000`; bottom = `before + 1000`; empty = 1000.
+- [x] Action `moveIssue(projectKey, number, { status, beforeNumber?, afterNumber? })`: member; compute the new `order` **on the server** from the neighbours' current values (don't trust a client-sent `order`); update the one issue.
+- [x] **Rebalance:** if the gap between neighbours is < 0.001, renumber that column to 1000, 2000, 3000… in one `bulkWrite`, then place the card.
+- [x] Optimistic update with `useOptimistic`; roll back and show an error toast if the action fails.
+- [x] Quick "+ Add issue" at the top of the To do column.
+- [x] Keyboard-accessible dragging (dnd-kit keyboard sensor).
 
 **Verify**
 - [ ] Reorder within a column and move across columns; order survives a hard refresh.

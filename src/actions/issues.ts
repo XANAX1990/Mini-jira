@@ -5,7 +5,7 @@ import { Types } from "mongoose";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { authorizeAdmin, authorizeMember } from "@/lib/permissions";
-import { orderAtEnd } from "@/lib/order";
+import { needsRebalance, orderAtEnd, orderBetween, rebalanceColumn } from "@/lib/order";
 import { IssueModel, PRIORITIES, STATUSES, TYPES } from "@/models/Issue";
 import { ProjectModel, type Project } from "@/models/Project";
 import type { ActionResult } from "@/actions/projects";
@@ -149,6 +149,75 @@ export async function deleteIssue(projectKey: string, number: number): Promise<A
   await connectDB();
   const res = await IssueModel.deleteOne({ projectId: project._id, number: num.data });
   if (res.deletedCount === 0) return { ok: false, error: "Issue not found" };
+
+  refresh(project.key, num.data);
+  return { ok: true, data: undefined };
+}
+
+const moveSchema = z
+  .object({
+    status: z.enum(STATUSES),
+    beforeNumber: numberSchema.optional(),
+    afterNumber: numberSchema.optional(),
+  })
+  .strict();
+
+const STALE_BOARD = "The board changed, please try again";
+
+/**
+ * Drop a card between two neighbours (by issue number). The new `order` is computed
+ * here from the neighbours' current values; the client never sends one.
+ */
+export async function moveIssue(
+  projectKey: string,
+  number: number,
+  target: unknown
+): Promise<ActionResult> {
+  const access = await authorizeMember(projectKey);
+  if (!access.ok) return accessError(access.error);
+  const { project } = access;
+
+  const num = numberSchema.safeParse(number);
+  const parsed = moveSchema.safeParse(target);
+  if (!num.success || !parsed.success) return { ok: false, error: "Invalid move" };
+  const { status, beforeNumber, afterNumber } = parsed.data;
+
+  await connectDB();
+  const issue = await IssueModel.findOne({ projectId: project._id, number: num.data })
+    .select("_id")
+    .lean();
+  if (!issue) return { ok: false, error: "Issue not found" };
+
+  // Neighbours must be other cards of this project in the target column.
+  const column = { projectId: project._id, status, _id: { $ne: issue._id } };
+  const find = (extra: Record<string, unknown>) =>
+    IssueModel.findOne({ ...column, ...extra }).select("number order");
+
+  let before = beforeNumber === undefined ? null : await find({ number: beforeNumber }).lean();
+  let after = afterNumber === undefined ? null : await find({ number: afterNumber }).lean();
+  if ((beforeNumber !== undefined && !before) || (afterNumber !== undefined && !after)) {
+    return { ok: false, error: STALE_BOARD };
+  }
+  if (before && after && before.order >= after.order) return { ok: false, error: STALE_BOARD };
+  // With one neighbour only, use the real card on the other side instead of trusting the client.
+  if (before && !after) after = await find({ order: { $gt: before.order } }).sort({ order: 1 }).lean();
+  if (after && !before) before = await find({ order: { $lt: after.order } }).sort({ order: -1 }).lean();
+
+  let order: number;
+  if (!before && !after) {
+    order = (await IssueModel.exists(column)) ? await orderAtEnd(project._id, status) : orderBetween();
+  } else {
+    let b = before?.order;
+    let a = after?.order;
+    if (needsRebalance(b, a)) {
+      const renumbered = await rebalanceColumn(project._id, status, issue._id);
+      b = before ? renumbered.get(before.number) : undefined;
+      a = after ? renumbered.get(after.number) : undefined;
+    }
+    order = orderBetween(b, a);
+  }
+
+  await IssueModel.updateOne({ _id: issue._id }, { $set: { status, order } });
 
   refresh(project.key, num.data);
   return { ok: true, data: undefined };
