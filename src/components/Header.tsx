@@ -1,4 +1,5 @@
-import { requireUser, signOut } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
+import { signOutAction } from "@/actions/auth";
 
 export async function Header() {
   const user = await requireUser();
@@ -12,12 +13,7 @@ export async function Header() {
           <img src={user.image} alt="" className="h-7 w-7 rounded-full" />
         )}
         <span>{user.name}</span>
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/login" });
-          }}
-        >
+        <form action={signOutAction}>
           <button type="submit" className="text-zinc-500 hover:underline">
             Sign out
           </button>

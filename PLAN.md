@@ -6,7 +6,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 
 - [x] Phase 1: Foundation (scaffold, DB, models)
 - [x] Phase 2: Authentication (GitHub OAuth)
-- [ ] Phase 3: Projects & permissions core
+- [x] Phase 3: Projects & permissions core
 - [ ] Phase 4: Issues CRUD
 - [ ] Phase 5: Kanban board (drag & drop)
 - [ ] Phase 6: Members & roles management
@@ -90,14 +90,14 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Goal:** Create projects, list my projects, and have one reusable permission layer that every later phase uses.
 
 **Tasks**
-- [ ] `src/lib/permissions.ts`:
+- [x] `src/lib/permissions.ts`:
   - `getMembership(projectKey, userId)` → `{ project, role } | null`
   - `requireMember(projectKey)` → uses `requireUser()`, returns `{ user, project, role }`, or `notFound()` if not a member (don't reveal that the project exists)
   - `requireAdmin(projectKey)` → same, plus a forbidden result if the role isn't `admin`
-- [ ] Action `createProject({ name, key })`: Zod-validate (`key` = 2–6 uppercase letters), creator becomes `ownerId` and the first member with role `admin`. Handle a duplicate key (unique index error) with a friendly message.
-- [ ] `/projects`: list projects where I'm a member (use the `members.userId` index), showing name, key, my role. Empty state with a "Create project" form/modal.
-- [ ] `/projects/[key]` layout: project name + key, nav tabs (Board, Settings – Settings visible to admins only). Board page can be a placeholder for now.
-- [ ] Non-members visiting `/projects/XYZ` get a 404.
+- [x] Action `createProject({ name, key })`: Zod-validate (`key` = 2–6 uppercase letters), creator becomes `ownerId` and the first member with role `admin`. Handle a duplicate key (unique index error) with a friendly message.
+- [x] `/projects`: list projects where I'm a member (use the `members.userId` index), showing name, key, my role. Empty state with a "Create project" form/modal.
+- [x] `/projects/[key]` layout: project name + key, nav tabs (Board, Settings – Settings visible to admins only). Board page can be a placeholder for now.
+- [x] Non-members visiting `/projects/XYZ` get a 404.
 
 **Verify**
 - [ ] Create a project → it shows in the list with role Admin.
