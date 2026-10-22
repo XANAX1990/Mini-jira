@@ -50,3 +50,15 @@
 - **Fix:** each card has a drag handle (`touch-action: none`, top right). `TouchSensor` has a 5 px distance constraint and is only started from the handle (`onTouchStart` is filtered in `IssueCard`), so a finger drags immediately from the handle and a swipe anywhere else scrolls the board. Mouse and keyboard still grab the whole card. Cards also got `select-none` and `-webkit-touch-callout: none`.
 - **Verified (raw touch events, 375px):** drag from the handle moves and persists; swipe from the card body scrolls 16 → 324 without moving a card; tap opens the issue; desktop mouse drag from the card body still works.
 - **Rule:** On touch screens give draggable items in a scrolling area a dedicated handle with `touch-action: none` instead of relying on long-press.
+
+## 2026-10-23 · "uncached data during prerendering or a navigation" again, on Settings and Issue pages (Phase 7)
+- **Symptom:** the same console error as the board page, now on `/projects/[key]/settings` and `/projects/[key]/issues/[number]` when clicking the Settings tab or a card. Server log and `next build` stayed clean.
+- **Root cause:** the earlier fix put one `loading.tsx` at `[key]/`. When you navigate from the board, that boundary is already on screen, so the new segment (`settings/`, `issues/[number]/`) has no boundary of its own. The board page only looked fixed because I had only navigated from the project list, where `[key]` itself was the new segment.
+- **Fix:** `loading.tsx` inside `settings/` and `issues/[number]/` (not `issues/`: the dynamic segment is the one that needs it). Reproduced and checked by clicking through list → board → Settings → board → issue → board → Settings → list in Chrome against the dev server and reading the console: 7 of 7 steps clean, 2 of 7 failed before.
+- **Rule:** Every route segment you can navigate *into* needs its own `loading.tsx` (or `<Suspense>`), including dynamic `[param]` segments. Test navigation by clicking from each sibling page, not only from the page above, and read the browser console.
+
+## 2026-10-23 · Dropdown text unreadable in dark mode (Phase 7)
+- **Symptom:** every `<select>` list (board filters, role pickers) showed near-invisible text in dark mode: light text on a white list.
+- **Root cause:** the open list of a native select is drawn with the options' own colors. The options inherited the page's light text color, but the list background stayed white because the selects use `bg-transparent`. `color-scheme: light dark` alone did not fix it on Windows Chrome.
+- **Fix:** `option, optgroup { background-color: var(--background); color: var(--foreground) }` in `globals.css`. Computed contrast is now 16.9:1 (dark) and 17.9:1 (light) on all pages with selects.
+- **Rule:** Style `option` explicitly whenever a select is transparent; Lighthouse does not check the popup, so look at it by eye in dark mode.
