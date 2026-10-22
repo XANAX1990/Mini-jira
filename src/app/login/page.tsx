@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { SignInButton } from "@/components/SignInButton";
 
 async function LoginForm() {
-  const session = await auth();
+  const session = await getSession();
   if (session?.user) redirect("/projects");
   return <SignInButton />;
 }

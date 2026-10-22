@@ -13,6 +13,25 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // `auth()` must run after `connection()` (Cache Components); getSession()/requireUser() do that.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/auth.ts", "src/proxy.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/auth",
+              importNames: ["auth"],
+              message: "Use getSession() or requireUser(): auth() alone logs crypto.getRandomValues() errors while prerendering.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

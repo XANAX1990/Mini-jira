@@ -35,11 +35,19 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
   },
 });
 
+/**
+ * The current session, or null. Pages and components must call this instead of `auth()`:
+ * with Cache Components, Auth.js touches crypto before it reads any request data, so
+ * it has to run after `connection()` (and inside a <Suspense> boundary).
+ */
+export async function getSession() {
+  await connection();
+  return auth();
+}
+
 /** Server-side guard: returns the signed-in user or redirects to /login. */
 export async function requireUser() {
-  // Opt out of prerendering before Auth.js touches crypto (Cache Components).
-  await connection();
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) redirect("/login");
   const { id, name, email, image } = session.user;
   return { id, name: name ?? email ?? "", email: email ?? "", image: image ?? null };
