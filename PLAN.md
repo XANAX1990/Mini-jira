@@ -167,11 +167,11 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] Assignee picker on issues lists only current members.
 
 **Verify**
-- [ ] Add a second account as Member → it sees the project; it can't open Settings (404/forbidden) or call admin actions.
-- [ ] Promote it to Admin → Settings appears for it.
-- [ ] Trying to demote/remove the last admin shows an error.
-- [ ] Removing a member clears their assignments.
-- [ ] Global checks pass.
+- [x] Add a second account as Member → it sees the project; it can't open Settings (404/forbidden) or call admin actions.
+- [x] Promote it to Admin → Settings appears for it.
+- [x] Trying to demote/remove the last admin shows an error.
+- [x] Removing a member clears their assignments.
+- [x] Global checks pass.
 
 ---
 
