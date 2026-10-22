@@ -7,7 +7,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 1: Foundation (scaffold, DB, models)
 - [x] Phase 2: Authentication (GitHub OAuth)
 - [x] Phase 3: Projects & permissions core
-- [ ] Phase 4: Issues CRUD
+- [x] Phase 4: Issues CRUD
 - [ ] Phase 5: Kanban board (drag & drop)
 - [ ] Phase 6: Members & roles management
 - [ ] Phase 7: Polish (filters, search, UX states, seed data)
@@ -112,13 +112,13 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Goal:** Full issue lifecycle, shown as `KEY-number`.
 
 **Tasks**
-- [ ] `src/lib/order.ts`: `orderAtEnd(projectId, status)` → (max `order` in that column) + 1000, or 1000 if the column is empty.
-- [ ] Action `createIssue(projectKey, input)`: `requireMember`; get the number atomically with `findOneAndUpdate({ _id }, { $inc: { issueCounter: 1 } }, { new: true })`; `reporterId` = current user; `status` = `todo`; `order` = `orderAtEnd`.
-- [ ] Action `updateIssue(projectKey, number, patch)`: member; Zod-validate fields (title, description, type, priority, assigneeId, status). `assigneeId` must be a member of the project or null.
-- [ ] Action `deleteIssue(projectKey, number)`: **admin only**.
-- [ ] Issue detail page `/projects/[key]/issues/[number]`: view + edit form, delete button for admins only (and still enforced in the action).
-- [ ] Temporary simple list view on the Board tab (grouped by status) until Phase 5 replaces it.
-- [ ] Revalidate the affected pages after each action.
+- [x] `src/lib/order.ts`: `orderAtEnd(projectId, status)` → (max `order` in that column) + 1000, or 1000 if the column is empty.
+- [x] Action `createIssue(projectKey, input)`: `requireMember`; get the number atomically with `findOneAndUpdate({ _id }, { $inc: { issueCounter: 1 } }, { new: true })`; `reporterId` = current user; `status` = `todo`; `order` = `orderAtEnd`.
+- [x] Action `updateIssue(projectKey, number, patch)`: member; Zod-validate fields (title, description, type, priority, assigneeId, status). `assigneeId` must be a member of the project or null.
+- [x] Action `deleteIssue(projectKey, number)`: **admin only**.
+- [x] Issue detail page `/projects/[key]/issues/[number]`: view + edit form, delete button for admins only (and still enforced in the action).
+- [x] Temporary simple list view on the Board tab (grouped by status) until Phase 5 replaces it.
+- [x] Revalidate the affected pages after each action.
 
 **Verify**
 - [ ] Create 3 issues → `MJ-1`, `MJ-2`, `MJ-3` in order. Deleting `MJ-2` and creating a new one gives `MJ-4` (numbers are never reused).

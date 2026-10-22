@@ -1,10 +1,12 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { Types } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ProjectModel, type Role } from "@/models/Project";
 
-export async function getMembership(projectKey: string, userId: string) {
+// cache(): layout and page both ask for the membership in one request.
+export const getMembership = cache(async (projectKey: string, userId: string) => {
   if (!Types.ObjectId.isValid(userId)) return null;
   await connectDB();
   const project = await ProjectModel.findOne({
@@ -14,7 +16,7 @@ export async function getMembership(projectKey: string, userId: string) {
   if (!project) return null;
   const role = project.members.find((m) => m.userId.toString() === userId)?.role ?? "member";
   return { project, role: role as Role };
-}
+});
 
 /** Signed-in member of the project, or 404 (never reveals that the project exists). */
 export async function requireMember(projectKey: string) {
@@ -29,4 +31,19 @@ export async function requireAdmin(projectKey: string) {
   const ctx = await requireMember(projectKey);
   if (ctx.role !== "admin") return { ok: false as const, error: "forbidden" as const };
   return { ok: true as const, ...ctx };
+}
+
+/** Non-throwing variants for Server Actions: expected failures come back as results. */
+export async function authorizeMember(projectKey: string) {
+  const user = await requireUser();
+  const membership = await getMembership(projectKey, user.id);
+  if (!membership) return { ok: false as const, error: "not_found" as const };
+  return { ok: true as const, user, ...membership };
+}
+
+export async function authorizeAdmin(projectKey: string) {
+  const ctx = await authorizeMember(projectKey);
+  if (!ctx.ok) return ctx;
+  if (ctx.role !== "admin") return { ok: false as const, error: "forbidden" as const };
+  return ctx;
 }
