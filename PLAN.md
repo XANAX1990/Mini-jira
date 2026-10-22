@@ -205,13 +205,13 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] Vitest unit tests: `order.ts` (midpoint, ends, empty, rebalance trigger) and `permissions.ts` (member / admin / non-member / last-admin guard).
 - [ ] Optional: one Playwright smoke test (sign-in mocked or skipped) that loads the board and moves a card.
 - [x] Delete `src/app/api/health`.
-- [ ] Deploy to Vercel: set all env vars; add the production callback URL to the GitHub OAuth App (or create a separate production OAuth App); confirm Atlas Network Access allows Vercel.
-- [ ] README (done except the live demo link, which needs the deploy): replace the status column with ✅, add a live demo link, 2–3 screenshots or a GIF of drag & drop, and a short "What I learned" section (SRV DNS issue, fractional ordering, server-side authorization).
+- [x] Deploy to Vercel (https://mini-jira-tan.vercel.app): set all env vars; add the production callback URL to the GitHub OAuth App (or create a separate production OAuth App); confirm Atlas Network Access allows Vercel.
+- [x] README: replace the status column with ✅, add a live demo link, 2–3 screenshots or a GIF of drag & drop, and a short "What I learned" section (SRV DNS issue, fractional ordering, server-side authorization).
 - [x] Add `npm test` to the global checks.
 
 **Verify**
-- [x] `npm test` passes (40 tests).
-- [ ] Production: sign in, create project, create issues, drag cards, manage members. All work.
+- [x] `npm test` passes (51 tests).
+- [ ] Production: sign in, create project, create issues, drag cards, manage members. All work. (Sign in confirmed on 2026-10-23; the rest still to be checked.)
 - [x] No secrets in the repo (checked before the first push: none of the four real values from `.env.local` appears in any commit or tracked file; the grep only matches variable names in `.env.example` and the docs).
 
 ---

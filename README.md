@@ -2,7 +2,7 @@
 
 A lightweight issue tracker with a drag-and-drop Kanban board and per-project roles. I built it to practice full-stack work end to end: authentication, relational-style data in MongoDB, server-side authorization, and optimistic UI.
 
-**Live demo:** _added after the first Vercel deploy_
+**Live demo:** https://mini-jira-tan.vercel.app (sign in with any GitHub account; you only see projects you create or are added to)
 
 ![Dragging a card from To do into In progress](docs/screenshots/drag-and-drop.gif)
 
@@ -139,10 +139,11 @@ Never commit `.env.local`. It is already in `.gitignore`.
 
 ## Testing
 
-`npm test` runs 40 unit tests:
+`npm test` runs 51 unit tests:
 
 - `src/lib/order.test.ts`: midpoint, top, bottom and empty column; when a rebalance is needed (exactly after 20 halvings); renumbering in a single `bulkWrite`; 60 cards dropped into the same gap stay in order.
 - `src/lib/permissions.test.ts`: member, admin and non-member for `getMembership`, `requireMember`, `requireAdmin` and the non-throwing variants used by Server Actions.
+- `src/proxy.test.ts`: the signed-in / signed-out redirects with real tokens, on https (cookie `__Secure-authjs.session-token`), on http, and behind a proxy. This is the regression test for a production-only login loop.
 - `src/actions/members.test.ts`: the last-admin guard when demoting and removing, adding by email, issues unassigned when a member is removed.
 
 The database is mocked, so these tests check the logic and the shape of the queries, not MongoDB itself. I checked the real behavior (including two admins demoting each other at the same time, and 60 drops into one gap) against Atlas by hand. There is no browser end-to-end test in the repo.
