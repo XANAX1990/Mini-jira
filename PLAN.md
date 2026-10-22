@@ -212,7 +212,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Verify**
 - [x] `npm test` passes (51 tests).
 - [x] Production: sign in, create project, create issues, drag cards, manage members. All work. (Checked by the owner on https://mini-jira-tan.vercel.app on 2026-10-23, including sign out + Back.)
-- [x] No secrets in the repo (checked before the first push: none of the four real values from `.env.local` appears in any commit or tracked file; the grep only matches variable names in `.env.example` and the docs).
+- [x] No secrets in the repo (re-checked before the final push on 2026-10-23: none of the four values from `.env.local` appears in any commit or tracked file, no secret-shaped strings (`mongodb://user:pass@`, `ghp_`, `AUTH_SECRET=<value>`, private keys) were ever added, and the only secret-named file ever committed is `.env.example`. The Vercel production values are not in `.env.local`, so they were covered by the pattern scan only).
 
 ---
 
