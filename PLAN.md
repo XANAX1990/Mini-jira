@@ -11,7 +11,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 5: Kanban board (drag & drop)
 - [x] Phase 6: Members & roles management
 - [x] Phase 7: Polish (filters, search, UX states, seed data)
-- [ ] Phase 8: Tests, deploy, docs
+- [x] Phase 8: Tests, deploy, docs
 
 ---
 
@@ -211,7 +211,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 
 **Verify**
 - [x] `npm test` passes (51 tests).
-- [ ] Production: sign in, create project, create issues, drag cards, manage members. All work. (Sign in confirmed on 2026-10-23; the rest still to be checked.)
+- [x] Production: sign in, create project, create issues, drag cards, manage members. All work. (Checked by the owner on https://mini-jira-tan.vercel.app on 2026-10-23, including sign out + Back.)
 - [x] No secrets in the repo (checked before the first push: none of the four real values from `.env.local` appears in any commit or tracked file; the grep only matches variable names in `.env.example` and the docs).
 
 ---
