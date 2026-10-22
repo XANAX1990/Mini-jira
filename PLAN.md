@@ -5,7 +5,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 ## Progress
 
 - [x] Phase 1: Foundation (scaffold, DB, models)
-- [ ] Phase 2: Authentication (GitHub OAuth)
+- [x] Phase 2: Authentication (GitHub OAuth)
 - [ ] Phase 3: Projects & permissions core
 - [ ] Phase 4: Issues CRUD
 - [ ] Phase 5: Kanban board (drag & drop)
@@ -51,8 +51,8 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 **Done:** Next.js 16 + TS + Tailwind scaffold, `src/lib/db.ts` (cached Mongoose connection), models `User`, `Project`, `Issue` with indexes, `GET /api/health` returns collection counts. Atlas is reached via a **legacy (non-SRV) URI** because SRV DNS lookups fail on the dev machine.
 
 Leftover task for Phase 2's first commit:
-- [ ] Remove the `node:dns` / `dns.setServers` lines from `src/lib/db.ts` if they are still there (no longer needed with the legacy URI).
-- [ ] Add `.env.example` listing every env var from the README, with empty values.
+- [x] Remove the `node:dns` / `dns.setServers` lines from `src/lib/db.ts` if they are still there (no longer needed with the legacy URI).
+- [x] Add `.env.example` listing every env var from the README, with empty values.
 
 ---
 
@@ -64,15 +64,15 @@ Leftover task for Phase 2's first commit:
 Before installing, confirm the Auth.js version supports the installed Next.js 16. If it doesn't, stop and report the options instead of forcing it.
 
 **Tasks**
-- [ ] Install Auth.js. Create `src/lib/auth.ts` exporting `auth`, `signIn`, `signOut`, `handlers`.
-- [ ] Route handler `src/app/api/auth/[...nextauth]/route.ts`.
-- [ ] `signIn`/`jwt` callbacks: upsert `User` (name, email, image), put `id` on the token. `session` callback exposes `session.user.id`.
-- [ ] Type augmentation so `session.user.id` is typed as `string`.
-- [ ] `src/proxy.ts` (Next 16 replacement for middleware): redirect signed-out users hitting `/projects/**` to `/login`.
-- [ ] `src/lib/auth.ts` helper `requireUser()` → returns `{ id, name, email, image }` or redirects to `/login`. This is the server-side guard; `proxy.ts` is only the first line of defense.
-- [ ] Pages: `/` (simple landing with "Sign in with GitHub"), `/login`.
-- [ ] Header component: avatar, name, Sign out. Shown on signed-in pages.
-- [ ] Update `.env.example` with `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`.
+- [x] Install Auth.js. Create `src/lib/auth.ts` exporting `auth`, `signIn`, `signOut`, `handlers`.
+- [x] Route handler `src/app/api/auth/[...nextauth]/route.ts`.
+- [x] `signIn`/`jwt` callbacks: upsert `User` (name, email, image), put `id` on the token. `session` callback exposes `session.user.id`.
+- [x] Type augmentation so `session.user.id` is typed as `string`.
+- [x] `src/proxy.ts` (Next 16 replacement for middleware): redirect signed-out users hitting `/projects/**` to `/login`.
+- [x] `src/lib/auth.ts` helper `requireUser()` → returns `{ id, name, email, image }` or redirects to `/login`. This is the server-side guard; `proxy.ts` is only the first line of defense.
+- [x] Pages: `/` (simple landing with "Sign in with GitHub"), `/login`.
+- [x] Header component: avatar, name, Sign out. Shown on signed-in pages.
+- [x] Update `.env.example` with `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`.
 
 **Needs from me:** create a GitHub OAuth App (callback `http://localhost:3000/api/auth/callback/github`) and put the credentials in `.env.local`. Tell me the exact steps in the report.
 
