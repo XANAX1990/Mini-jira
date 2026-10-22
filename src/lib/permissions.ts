@@ -47,3 +47,13 @@ export async function authorizeAdmin(projectKey: string) {
   if (ctx.role !== "admin") return { ok: false as const, error: "forbidden" as const };
   return ctx;
 }
+
+const ACCESS_ERRORS = {
+  not_found: "Project not found",
+  forbidden: "Only project admins can do this",
+} as const;
+
+/** Failed authorizeMember/authorizeAdmin -> the ActionResult error the client sees. */
+export function accessError(error: keyof typeof ACCESS_ERRORS) {
+  return { ok: false as const, error: ACCESS_ERRORS[error] };
+}

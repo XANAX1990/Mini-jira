@@ -9,7 +9,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 3: Projects & permissions core
 - [x] Phase 4: Issues CRUD
 - [x] Phase 5: Kanban board (drag & drop)
-- [ ] Phase 6: Members & roles management
+- [x] Phase 6: Members & roles management
 - [ ] Phase 7: Polish (filters, search, UX states, seed data)
 - [ ] Phase 8: Tests, deploy, docs
 
@@ -160,11 +160,11 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Decision:** Invite by **email of an existing user** (they must have signed in once). Show a clear message if the email isn't found ("Ask them to sign in to Mini Jira first"). Invite links/codes are out of scope.
 
 **Tasks**
-- [ ] `/projects/[key]/settings` (admin only via `requireAdmin`): rename project, members table (avatar, name, email, role).
-- [ ] Actions (all admin only): `addMember(email, role)`, `changeRole(userId, role)`, `removeMember(userId)`, `renameProject(name)`, `deleteProject(confirmKey)` (must type the key to confirm; deletes its issues too).
-- [ ] **Last-admin guard:** reject demoting or removing the only admin.
-- [ ] Removing a member unassigns them from that project's issues.
-- [ ] Assignee picker on issues lists only current members.
+- [x] `/projects/[key]/settings` (admin only via `requireAdmin`): rename project, members table (avatar, name, email, role).
+- [x] Actions (all admin only): `addMember(email, role)`, `changeRole(userId, role)`, `removeMember(userId)`, `renameProject(name)`, `deleteProject(confirmKey)` (must type the key to confirm; deletes its issues too).
+- [x] **Last-admin guard:** reject demoting or removing the only admin.
+- [x] Removing a member unassigns them from that project's issues.
+- [x] Assignee picker on issues lists only current members.
 
 **Verify**
 - [ ] Add a second account as Member → it sees the project; it can't open Settings (404/forbidden) or call admin actions.

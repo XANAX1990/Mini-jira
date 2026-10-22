@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
-import { authorizeAdmin, authorizeMember } from "@/lib/permissions";
+import { accessError, authorizeAdmin, authorizeMember } from "@/lib/permissions";
 import { needsRebalance, orderAtEnd, orderBetween, rebalanceColumn } from "@/lib/order";
 import { IssueModel, PRIORITIES, STATUSES, TYPES } from "@/models/Issue";
 import { ProjectModel, type Project } from "@/models/Project";
@@ -38,15 +38,6 @@ const updateSchema = z
   .refine((p) => Object.keys(p).length > 0, "Nothing to update");
 
 const numberSchema = z.number().int().positive();
-
-const ACCESS_ERRORS = {
-  not_found: "Project not found",
-  forbidden: "Only project admins can do this",
-} as const;
-
-function accessError(error: keyof typeof ACCESS_ERRORS) {
-  return { ok: false as const, error: ACCESS_ERRORS[error] };
-}
 
 function isMember(project: Project, userId: string) {
   return project.members.some((m) => m.userId.toString() === userId);

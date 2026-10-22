@@ -1,7 +1,9 @@
 import { Schema, model, models, Types, type InferSchemaType, type Model } from "mongoose";
 
-export const ROLES = ["admin", "member"] as const;
-export type Role = (typeof ROLES)[number];
+import { ROLES, type Role } from "@/lib/roles";
+
+export { ROLES };
+export type { Role };
 
 const MemberSchema = new Schema(
   {
