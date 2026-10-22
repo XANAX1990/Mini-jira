@@ -3,18 +3,21 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteProject } from "@/actions/projects";
+import { useToast } from "@/components/Toast";
 
 export function DeleteProject({ projectKey }: { projectKey: string }) {
   const router = useRouter();
   const [typed, setTyped] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   function onDelete() {
     startTransition(async () => {
       const res = await deleteProject(projectKey, typed);
-      if (res.ok) router.push("/projects");
-      else setError(res.error);
+      if (res.ok) {
+        toast(`Project ${projectKey} deleted`);
+        router.push("/projects");
+      } else toast(res.error, "error");
     });
   }
 
@@ -41,11 +44,6 @@ export function DeleteProject({ projectKey }: { projectKey: string }) {
           {pending ? "Deleting…" : "Delete project"}
         </button>
       </div>
-      {error && (
-        <p role="alert" className="text-sm text-red-600">
-          {error}
-        </p>
-      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { ProjectModel, type Project, type Role } from "@/models/Project";
 import { IssueModel, STATUSES, type Status } from "@/models/Issue";
 import { UserModel } from "@/models/User";
+import type { BoardFilters } from "@/lib/board-filters";
 
 export type ProjectListItem = { id: string; name: string; key: string; role: Role };
 
@@ -83,10 +84,29 @@ function toIssueItem(i: IssueLean): IssueItem {
   };
 }
 
-/** All issues of a project in one query, grouped by column and sorted by order. */
-export async function listIssuesByStatus(projectId: Types.ObjectId) {
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * All issues of a project in one query, grouped by column and sorted by order.
+ * Filters are applied in the query; `meId` resolves the "me" assignee.
+ */
+export async function listIssuesByStatus(
+  projectId: Types.ObjectId,
+  filters: BoardFilters = {},
+  meId?: string
+) {
   await connectDB();
-  const issues = await findIssues({ projectId });
+  const filter: Record<string, unknown> = { projectId };
+  if (filters.type) filter.type = filters.type;
+  if (filters.priority) filter.priority = filters.priority;
+  if (filters.q) filter.title = { $regex: escapeRegex(filters.q), $options: "i" };
+  if (filters.assignee === "none") filter.assigneeId = null;
+  else if (filters.assignee) {
+    const id = filters.assignee === "me" ? meId : filters.assignee;
+    filter.assigneeId = id && Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : null;
+  }
+
+  const issues = await findIssues(filter);
   const grouped = Object.fromEntries(STATUSES.map((s) => [s, [] as IssueItem[]])) as Record<
     Status,
     IssueItem[]

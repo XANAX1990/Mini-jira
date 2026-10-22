@@ -10,7 +10,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 4: Issues CRUD
 - [x] Phase 5: Kanban board (drag & drop)
 - [x] Phase 6: Members & roles management
-- [ ] Phase 7: Polish (filters, search, UX states, seed data)
+- [x] Phase 7: Polish (filters, search, UX states, seed data)
 - [ ] Phase 8: Tests, deploy, docs
 
 ---
@@ -180,13 +180,13 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Goal:** Feels like a finished product, good enough to demo in an interview.
 
 **Tasks**
-- [ ] Board filters: assignee (incl. "Unassigned" and "Me"), type, priority. Text search on title. Keep filter state in the URL query string.
-- [ ] `loading.tsx`, `error.tsx`, `not-found.tsx` for the project routes.
-- [ ] Empty states (no projects, empty column, no search results).
-- [ ] Toasts for action results.
-- [ ] Responsive: on mobile, columns stack/scroll horizontally and drag still works (touch sensor).
-- [ ] Dark mode via Tailwind `dark:` (follow system).
-- [ ] `scripts/seed.ts` (`npm run seed`): creates a demo project `DEMO` with ~15 realistic issues across all columns for the signed-in user's email (passed as an argument). Refuses to run when `NODE_ENV=production`.
+- [x] Board filters: assignee (incl. "Unassigned" and "Me"), type, priority. Text search on title. Keep filter state in the URL query string.
+- [x] `loading.tsx`, `error.tsx`, `not-found.tsx` for the project routes.
+- [x] Empty states (no projects, empty column, no search results).
+- [x] Toasts for action results.
+- [x] Responsive: on mobile, columns stack/scroll horizontally and drag still works (touch sensor).
+- [x] Dark mode via Tailwind `dark:` (follow system).
+- [x] `scripts/seed.ts` (`npm run seed`): creates a demo project `DEMO` with ~15 realistic issues across all columns for the signed-in user's email (passed as an argument). Refuses to run when `NODE_ENV=production`.
 
 **Verify**
 - [ ] Filters combine correctly and survive a refresh / shared URL.

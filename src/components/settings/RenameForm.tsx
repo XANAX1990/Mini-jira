@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { renameProject } from "@/actions/projects";
+import { useToast } from "@/components/Toast";
 
 export function RenameForm({ projectKey, name }: { projectKey: string; name: string }) {
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       const res = await renameProject(projectKey, formData.get("name"));
-      setMessage(res.ok ? { ok: true, text: "Saved" } : { ok: false, text: res.error });
+      if (res.ok) toast("Project renamed");
+      else toast(res.error, "error");
     });
   }
 
@@ -31,14 +33,6 @@ export function RenameForm({ projectKey, name }: { projectKey: string; name: str
       >
         {pending ? "Saving…" : "Rename"}
       </button>
-      {message && (
-        <p
-          role={message.ok ? "status" : "alert"}
-          className={`text-sm ${message.ok ? "text-green-600" : "text-red-600"}`}
-        >
-          {message.text}
-        </p>
-      )}
     </form>
   );
 }

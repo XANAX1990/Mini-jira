@@ -26,7 +26,7 @@ export function IssueCardView({
 }) {
   const body = (
     <>
-      <span className="mb-1 block font-mono text-xs text-zinc-500">
+      <span className="mb-1 block font-mono text-xs text-zinc-600 dark:text-zinc-400">
         {projectKey}-{issue.number}
       </span>
       <span className="mb-2 block text-sm">{issue.title}</span>
@@ -68,6 +68,9 @@ export function IssueCard({
       className={`${card} ${isDragging ? "opacity-40" : ""}`}
       {...attributes}
       {...listeners}
+      // dnd-kit sets role="button", but the card contains a link: nested interactive roles are invalid.
+      role="group"
+      aria-label={`${projectKey}-${issue.number}: ${issue.title}`}
     >
       <IssueCardView projectKey={projectKey} issue={issue} assignee={assignee} />
     </div>

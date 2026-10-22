@@ -2,14 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { createIssue } from "@/actions/issues";
+import { useToast } from "@/components/Toast";
 
-export function QuickAdd({
-  projectKey,
-  onError,
-}: {
-  projectKey: string;
-  onError: (message: string) => void;
-}) {
+export function QuickAdd({ projectKey }: { projectKey: string }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -17,8 +13,10 @@ export function QuickAdd({
     const title = String(formData.get("title") ?? "");
     startTransition(async () => {
       const res = await createIssue(projectKey, { title });
-      if (res.ok) setOpen(false);
-      else onError(res.error);
+      if (res.ok) {
+        setOpen(false);
+        toast(`${projectKey}-${res.data.number} created`);
+      } else toast(res.error, "error");
     });
   }
 
@@ -27,7 +25,7 @@ export function QuickAdd({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-500 hover:bg-zinc-200/60 dark:hover:bg-zinc-800"
+        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-600 hover:bg-zinc-200/60 dark:text-zinc-400 dark:hover:bg-zinc-800"
       >
         + Add issue
       </button>
@@ -57,7 +55,7 @@ export function QuickAdd({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md px-3 py-1.5 text-sm text-zinc-500 hover:underline"
+          className="rounded-md px-3 py-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:underline"
         >
           Cancel
         </button>

@@ -5,7 +5,7 @@ export function Avatar({ member }: { member: MemberItem | undefined }) {
     return (
       <span
         title="Unassigned"
-        className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-zinc-300 text-xs text-zinc-400 dark:border-zinc-700"
+        className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-zinc-300 text-xs text-zinc-600 dark:text-zinc-400 dark:border-zinc-700"
       >
         ?
       </span>

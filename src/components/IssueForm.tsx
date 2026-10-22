@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteIssue, updateIssue } from "@/actions/issues";
 import { PRIORITIES, STATUSES, TYPES } from "@/lib/issue-constants";
 import { STATUS_LABELS } from "@/components/IssueBadges";
+import { useToast } from "@/components/Toast";
 import type { IssueItem, MemberItem } from "@/lib/queries";
 
 const field =
@@ -22,7 +23,7 @@ export function IssueForm({
   canDelete: boolean;
 }) {
   const router = useRouter();
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   function onSave(formData: FormData) {
@@ -36,7 +37,8 @@ export function IssueForm({
         status: formData.get("status"),
         assigneeId: assignee === "" ? null : assignee,
       });
-      setMessage(res.ok ? { ok: true, text: "Saved" } : { ok: false, text: res.error });
+      if (res.ok) toast("Saved");
+      else toast(res.error, "error");
     });
   }
 
@@ -44,8 +46,10 @@ export function IssueForm({
     if (!window.confirm(`Delete ${projectKey}-${issue.number}? This cannot be undone.`)) return;
     startTransition(async () => {
       const res = await deleteIssue(projectKey, issue.number);
-      if (res.ok) router.push(`/projects/${projectKey}`);
-      else setMessage({ ok: false, text: res.error });
+      if (res.ok) {
+        toast(`${projectKey}-${issue.number} deleted`);
+        router.push(`/projects/${projectKey}`);
+      } else toast(res.error, "error");
     });
   }
 
@@ -70,7 +74,7 @@ export function IssueForm({
           className={`${field} w-full`}
         />
         <div className="flex flex-wrap gap-3">
-          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
             Status
             <select name="status" defaultValue={issue.status} className={field}>
               {STATUSES.map((s) => (
@@ -80,7 +84,7 @@ export function IssueForm({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
             Type
             <select name="type" defaultValue={issue.type} className={`${field} capitalize`}>
               {TYPES.map((t) => (
@@ -90,7 +94,7 @@ export function IssueForm({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
             Priority
             <select name="priority" defaultValue={issue.priority} className={`${field} capitalize`}>
               {PRIORITIES.map((p) => (
@@ -100,7 +104,7 @@ export function IssueForm({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+          <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
             Assignee
             <select name="assigneeId" defaultValue={issue.assigneeId ?? ""} className={field}>
               <option value="">Unassigned</option>
@@ -120,14 +124,6 @@ export function IssueForm({
           >
             {pending ? "Saving…" : "Save"}
           </button>
-          {message && (
-            <p
-              role={message.ok ? "status" : "alert"}
-              className={`text-sm ${message.ok ? "text-green-600" : "text-red-600"}`}
-            >
-              {message.text}
-            </p>
-          )}
         </div>
       </form>
 

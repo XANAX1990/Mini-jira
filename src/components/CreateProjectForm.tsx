@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createProject } from "@/actions/projects";
+import { useToast } from "@/components/Toast";
 
 const input =
   "rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
@@ -9,10 +10,14 @@ const input =
 export function CreateProjectForm() {
   const [state, action, pending] = useActionState(createProject, null);
   const formRef = useRef<HTMLFormElement>(null);
+  const toast = useToast();
 
   useEffect(() => {
-    if (state?.ok) formRef.current?.reset();
-  }, [state]);
+    if (state?.ok) {
+      formRef.current?.reset();
+      toast(`Project ${state.data.key} created`);
+    }
+  }, [state, toast]);
 
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-3 sm:flex-row sm:items-start">

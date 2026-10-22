@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useSensor,
   useSensors,
@@ -17,6 +19,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { moveIssue } from "@/actions/issues";
 import { STATUSES, type Status } from "@/lib/issue-constants";
 import type { IssueItem, MemberItem } from "@/lib/queries";
+import { useToast } from "@/components/Toast";
 import { Column } from "@/components/board/Column";
 import { IssueCardView, cardStyle } from "@/components/board/IssueCard";
 
@@ -40,26 +43,25 @@ export function Board({
   projectKey,
   issues,
   members,
+  filtered,
 }: {
   projectKey: string;
   issues: Columns;
   members: MemberItem[];
+  /** True when the URL filters are narrowing the board. */
+  filtered: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [columns, applyOptimistic] = useOptimistic(issues, applyMove);
   const [activeNumber, setActiveNumber] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const membersById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
-  useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(() => setError(null), 6000);
-    return () => clearTimeout(t);
-  }, [error]);
-
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // Long-press to drag on touch screens, so a normal swipe still scrolls the board.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     // Space lifts a focused card; Enter stays free for the link inside it.
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -115,7 +117,7 @@ export function Board({
       const res = await moveIssue(projectKey, number, { status: to, beforeNumber, afterNumber });
       if (!res.ok) {
         // The optimistic state rolls back when the transition ends; refresh to get the truth.
-        setError(`Couldn't move ${projectKey}-${number}: ${res.error}`);
+        toast(`Couldn't move ${projectKey}-${number}: ${res.error}`, "error");
         router.refresh();
       }
     });
@@ -125,53 +127,50 @@ export function Board({
     ? STATUSES.flatMap((s) => columns[s]).find((i) => i.number === activeNumber)
     : undefined;
 
-  return (
-    <>
-      <DndContext
-        id="board"
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        onDragCancel={() => setActiveNumber(null)}
-      >
-        <div className="grid gap-4 md:grid-cols-3">
-          {STATUSES.map((status) => (
-            <Column
-              key={status}
-              projectKey={projectKey}
-              status={status}
-              issues={columns[status]}
-              membersById={membersById}
-              onError={setError}
-            />
-          ))}
-        </div>
-        <DragOverlay>
-          {active && (
-            <div className={`${cardStyle} rotate-1 shadow-lg`}>
-              <IssueCardView
-                projectKey={projectKey}
-                issue={active}
-                assignee={active.assigneeId ? membersById.get(active.assigneeId) : undefined}
-                interactive={false}
-              />
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+  if (filtered && STATUSES.every((s) => columns[s].length === 0)) {
+    return (
+      <div className="rounded-md border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="mb-2">No issues match your filters.</p>
+        <Link href={`/projects/${projectKey}`} className="underline">
+          Clear filters
+        </Link>
+      </div>
+    );
+  }
 
-      {error && (
-        <div
-          role="alert"
-          className="fixed bottom-4 right-4 z-50 flex max-w-sm items-start gap-3 rounded-md bg-red-600 px-4 py-3 text-sm text-white shadow-lg"
-        >
-          <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} aria-label="Dismiss" className="font-bold">
-            ×
-          </button>
-        </div>
-      )}
-    </>
+  return (
+    <DndContext
+      id="board"
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setActiveNumber(null)}
+    >
+      {/* Phones: columns scroll sideways and snap; from md up they sit side by side. */}
+      <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
+        {STATUSES.map((status) => (
+          <Column
+            key={status}
+            projectKey={projectKey}
+            status={status}
+            issues={columns[status]}
+            membersById={membersById}
+          />
+        ))}
+      </div>
+      <DragOverlay>
+        {active && (
+          <div className={`${cardStyle} rotate-1 shadow-lg`}>
+            <IssueCardView
+              projectKey={projectKey}
+              issue={active}
+              assignee={active.assigneeId ? membersById.get(active.assigneeId) : undefined}
+              interactive={false}
+            />
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 }

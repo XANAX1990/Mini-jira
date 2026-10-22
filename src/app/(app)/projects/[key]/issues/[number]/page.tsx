@@ -20,7 +20,7 @@ export default async function IssuePage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 p-6">
-      <div className="flex items-center gap-3 text-sm text-zinc-500">
+      <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
         <Link href={`/projects/${project.key}`} className="hover:underline">
           ← Board
         </Link>

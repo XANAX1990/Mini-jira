@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addMember, changeRole, removeMember } from "@/actions/members";
 import { Avatar } from "@/components/Avatar";
+import { useToast } from "@/components/Toast";
 import { ROLES } from "@/lib/roles";
 import type { MemberItem } from "@/lib/queries";
 
@@ -21,25 +22,28 @@ export function MembersSection({
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   function onAdd(formData: FormData) {
     startTransition(async () => {
       const res = await addMember(projectKey, formData.get("email"), formData.get("role"));
       if (res.ok) {
-        setError(null);
+        toast("Member added");
         formRef.current?.reset();
-      } else setError(res.error);
+      } else toast(res.error, "error");
     });
   }
 
   function onRole(member: MemberItem, role: string) {
     startTransition(async () => {
       const res = await changeRole(projectKey, member.id, role);
-      setError(res.ok ? null : res.error);
-      // On failure the select still shows the rejected value: re-read the real one.
-      if (!res.ok) router.refresh();
+      if (res.ok) toast(`${member.name} is now ${role}`);
+      else {
+        toast(res.error, "error");
+        // The select still shows the rejected value: re-read the real one.
+        router.refresh();
+      }
     });
   }
 
@@ -51,8 +55,8 @@ export function MembersSection({
     if (!window.confirm(question)) return;
     startTransition(async () => {
       const res = await removeMember(projectKey, member.id);
-      if (!res.ok) return setError(res.error);
-      setError(null);
+      if (!res.ok) return toast(res.error, "error");
+      toast(self ? "You left the project" : `${member.name} removed`);
       if (self) router.push("/projects");
     });
   }
@@ -61,7 +65,7 @@ export function MembersSection({
     <div className="space-y-4">
       <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
         <table className="w-full text-left text-sm">
-          <thead className="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-900">
+          <thead className="bg-zinc-50 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
             <tr>
               <th className="px-4 py-2 font-medium">Member</th>
               <th className="px-4 py-2 font-medium">Email</th>
@@ -76,10 +80,10 @@ export function MembersSection({
                   <span className="flex items-center gap-2">
                     <Avatar member={m} />
                     {m.name}
-                    {m.id === currentUserId && <span className="text-xs text-zinc-500">(you)</span>}
+                    {m.id === currentUserId && <span className="text-xs text-zinc-600 dark:text-zinc-400">(you)</span>}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-zinc-500">{m.email}</td>
+                <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{m.email}</td>
                 <td className="px-4 py-2">
                   <select
                     key={m.role}
@@ -137,11 +141,6 @@ export function MembersSection({
         </button>
       </form>
 
-      {error && (
-        <p role="alert" className="text-sm text-red-600">
-          {error}
-        </p>
-      )}
     </div>
   );
 }
