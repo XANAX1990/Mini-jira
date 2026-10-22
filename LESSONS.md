@@ -9,3 +9,8 @@
 - **`UntrustedHost` under `next start`:** Auth.js only auto-trusts the host in dev. Added `trustHost: true` in `src/lib/auth.config.ts` (Vercel sets the host itself).
 - **`proxy.ts` must export a function:** `export const { auth: proxy } = NextAuth(...)` failed the build with "must export a function". Export a plain `proxy` function instead.
 - **Cache Components:** anything reading the session (`auth()`, `requireUser()`) must sit inside `<Suspense>`, otherwise the build fails on dynamic data. Header, the landing CTA and the login form are wrapped.
+
+## 2026-10-22 · Back button after Sign out (Phase 2)
+- **Risk:** Back after Sign out could show the protected page from the browser's back/forward cache or the client router cache.
+- **Fix:** Sign out redirects to `/login` (`src/components/Header.tsx`); `next.config.ts` sends `Cache-Control: no-store` for `/projects/**` so the browser won't keep those pages.
+- **Rule:** Protected routes are `no-store`; sign-out lands on `/login`.

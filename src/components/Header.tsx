@@ -15,7 +15,7 @@ export async function Header() {
         <form
           action={async () => {
             "use server";
-            await signOut({ redirectTo: "/" });
+            await signOut({ redirectTo: "/login" });
           }}
         >
           <button type="submit" className="text-zinc-500 hover:underline">
