@@ -1,5 +1,6 @@
-// Usage: npm run seed -- you@example.com
-// Creates a demo project (DEMO) with sample issues for a user who has signed in once.
+// Usage: npm run seed -- you@example.com [KEY]
+// Creates a demo project (key DEMO unless you pass another) with sample issues
+// for a user who has signed in once.
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { IssueModel } from "@/models/Issue";
@@ -37,7 +38,9 @@ async function main() {
     throw new Error("Refusing to seed: NODE_ENV is production");
   }
   const email = process.argv[2]?.trim().toLowerCase();
-  if (!email) throw new Error("Usage: npm run seed -- you@example.com");
+  const key = (process.argv[3] ?? "DEMO").trim().toUpperCase();
+  if (!email) throw new Error("Usage: npm run seed -- you@example.com [KEY]");
+  if (!/^[A-Z]{2,6}$/.test(key)) throw new Error("KEY must be 2-6 letters (A-Z)");
 
   await connectDB();
 
@@ -45,13 +48,13 @@ async function main() {
   if (!user) {
     throw new Error(`No user ${email}. Sign in to Mini Jira once first, then run the seed again.`);
   }
-  if (await ProjectModel.exists({ key: "DEMO" })) {
-    throw new Error("A project with key DEMO already exists. Delete it in its Settings first.");
+  if (await ProjectModel.exists({ key })) {
+    throw new Error(`A project with key ${key} already exists. Delete it in its Settings first, or pass another KEY.`);
   }
 
   const project = await ProjectModel.create({
     name: "Demo Project",
-    key: "DEMO",
+    key,
     ownerId: user._id,
     members: [{ userId: user._id, role: "admin" }],
     issueCounter: ISSUES.length,
@@ -73,7 +76,7 @@ async function main() {
     }))
   );
 
-  console.log(`Created DEMO with ${ISSUES.length} issues for ${email}`);
+  console.log(`Created ${key} with ${ISSUES.length} issues for ${email}`);
 }
 
 main()

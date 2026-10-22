@@ -30,6 +30,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
    ```bash
    npx tsc --noEmit
    npm run lint
+   npm test
    npm run build
    ```
 8. If you're blocked on something only I can do (accounts, secrets, a product decision), stop and ask. Don't invent values or work around it.
@@ -201,19 +202,21 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Goal:** Live URL, tests for the risky logic, README that sells the project.
 
 **Tasks**
-- [ ] Vitest unit tests: `order.ts` (midpoint, ends, empty, rebalance trigger) and `permissions.ts` (member / admin / non-member / last-admin guard).
+- [x] Vitest unit tests: `order.ts` (midpoint, ends, empty, rebalance trigger) and `permissions.ts` (member / admin / non-member / last-admin guard).
 - [ ] Optional: one Playwright smoke test (sign-in mocked or skipped) that loads the board and moves a card.
-- [ ] Delete `src/app/api/health`.
+- [x] Delete `src/app/api/health`.
 - [ ] Deploy to Vercel: set all env vars; add the production callback URL to the GitHub OAuth App (or create a separate production OAuth App); confirm Atlas Network Access allows Vercel.
-- [ ] README: replace the status column with ✅, add a live demo link, 2–3 screenshots or a GIF of drag & drop, and a short "What I learned" section (SRV DNS issue, fractional ordering, server-side authorization).
-- [ ] Add `npm test` to the global checks.
+- [ ] README (done except the live demo link, which needs the deploy): replace the status column with ✅, add a live demo link, 2–3 screenshots or a GIF of drag & drop, and a short "What I learned" section (SRV DNS issue, fractional ordering, server-side authorization).
+- [x] Add `npm test` to the global checks.
 
 **Verify**
-- [ ] `npm test` passes.
+- [x] `npm test` passes (40 tests).
 - [ ] Production: sign in, create project, create issues, drag cards, manage members. All work.
 - [ ] No secrets in the repo (`git log -p | grep -i -E "mongodb(\+srv)?://|secret"` returns nothing sensitive).
 
 ---
+
+**Not done (decisions):** the optional Playwright smoke test was skipped; the browser flows were checked by hand and with throwaway Chrome scripts that are not in the repo. `README.md` replaces the stock create-next-app file and the misspelled `READMEE.md`.
 
 ## Out of scope / later
 
