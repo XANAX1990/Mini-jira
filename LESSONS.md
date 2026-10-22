@@ -87,3 +87,25 @@
 - **Cause:** Sign out only deletes Mini Jira's own session cookie (`__Secure-authjs.session-token`). The user is still signed in to github.com in that browser and has already authorized the app, so GitHub redirects back to the callback immediately and the app creates a new session. Standard OAuth behavior. The app's sign-out itself works: after it, `/projects` redirects to `/login`.
 - **If a different account must be pickable:** sign out of github.com in the same window, or close all incognito windows. In code, GitHub may accept `prompt=select_account` in the provider's `authorization.params`; not tried, because it needs a real GitHub session to test, and it makes everyday sign-in slower.
 - **Rule:** "Sign out" means signing out of Mini Jira, not of GitHub. Don't report a repeat sign-in with a live GitHub session as a bug.
+
+## 2026-10-23 · Deploy summary: where the prerender `crypto.getRandomValues()` error shows up
+- **What to remember:** `next build` never reports it. The `Route "...": Next.js encountered the unstable value 'crypto.getRandomValues()' while prerendering` message appears in *runtime* logs: the dev server, `next start` and Vercel's function logs. It is not limited to production. The page still renders, so it is easy to miss; it came from Cache Components treating Auth.js (`auth()`) as part of the prerender. Details and the fixes are in the three entries above (Phase 3, `getSession()`, static `/` and `/login`).
+- **Rule:** Check the runtime log of a `build && start` run for every route, signed out and signed in, before calling a deploy done.
+
+## 2026-10-23 · Stale auth cookies after rotating `AUTH_SECRET` (reported during the deploy, not reproduced by me)
+- **Report:** after `AUTH_SECRET` was changed in Vercel, sign-in kept failing on the callback (`bad_verification_code`, `InvalidCheck pkceCodeVerifier ...`) until the site's data was cleared in the browser.
+- **Why it fits:** the session and PKCE cookies are encrypted with a key derived from `AUTH_SECRET`. Cookies made with the old secret cannot be decoded with the new one, so Auth.js treats them as invalid (and `could not be parsed` is the message it wraps most decode failures in). `bad_verification_code` is GitHub saying the one-time `code` is wrong, expired or already used, which happens when a callback URL is replayed (refresh, Back, an old tab).
+- **Fix:** clear the site's cookies (or use a fresh incognito window) after changing `AUTH_SECRET`, then sign in from the production domain.
+- **Caution:** this happened around the same time as the proxy cookie-name bug (entry "Login loop on Vercel"), which is the cause I proved and fixed in code. Several log lines at 04:53-04:54 on Oct 23 were my own test requests. Do not assume every `InvalidCheck` line is a real user.
+- **Rule:** After rotating `AUTH_SECRET`, expect everyone to be signed out and clear cookies before testing.
+
+## 2026-10-23 · Vercel env var value pasted as `KEY=value` (`MongoParseError: Invalid scheme`)
+- **Symptom:** on Vercel the database connection failed with `MongoParseError: Invalid scheme, expected connection string to start with "mongodb://" or "mongodb+srv://"`.
+- **Cause:** the *Value* field contained `MONGODB_URI=mongodb+srv://...` instead of just the URI. The name goes in the *Key* field. (The error text is thrown by the driver when the string does not start with one of those two schemes; checked in `mongodb-connection-string-url`.)
+- **Fix:** Value = `mongodb+srv://...` only, then redeploy.
+- **Rule:** In Vercel, Key and Value are separate boxes; never paste a `.env` line into Value. The same mistake on `AUTH_SECRET` would not fail loudly (the secret would just contain `AUTH_SECRET=` at the start), so check every variable.
+
+## 2026-10-23 · Databases: local vs production
+- Local development (`.env.local`) uses the database `mini-jira`. Production on Vercel uses `mini-jira-prod` (as stated by the project owner; the Vercel value is not visible from the repo).
+- So the test projects made locally do not appear on the live demo, and `npm run seed`, scripts and manual tests run from this machine only touch `mini-jira`.
+- To put demo data on production, temporarily point `MONGODB_URI` in `.env.local` at `.../mini-jira-prod`, run `npm run seed -- <email> [KEY]`, and restore the value. Never leave `.env.local` pointing at production.
