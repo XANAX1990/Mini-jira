@@ -60,8 +60,8 @@ export function Board({
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    // Long-press to drag on touch screens, so a normal swipe still scrolls the board.
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    // Touch starts only from a card's handle (see IssueCard), which has touch-action: none.
+    useSensor(TouchSensor, { activationConstraint: { distance: 5 } }),
     // Space lifts a focused card; Enter stays free for the link inside it.
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,

@@ -36,10 +36,17 @@
 - **Fix:** `zinc-600` in light mode and `dark:text-zinc-400` in dark mode for small secondary text. Score is 100 in light/dark, mobile/desktop.
 - **Rule:** Check accessibility in both color schemes. Use `text-zinc-600 dark:text-zinc-400` for secondary text, never bare `text-zinc-500`.
 
-## 2026-10-22 · Keyboard drag needs two ArrowRight presses (Phase 5 behavior, found in Phase 7)
-- **Observation:** with a card lifted by Space, the first ArrowRight from a card does not change the drop target; the second one does. ArrowLeft/Up/Down move on the first press. Identical in the Phase 5 and Phase 7 builds, so it comes from dnd-kit's keyboard coordinates with this layout, not from a recent change. Cross-column drop by keyboard works and persists.
+## 2026-10-22 · Keyboard drag sometimes ignores the first arrow press (Phase 5 behavior, found in Phase 7)
+- **Observation:** with a card lifted by Space, the first arrow press can leave the drop target unchanged (always seen with ArrowRight, sometimes with ArrowDown); the next press moves it. Identical in the Phase 5 and Phase 7 builds, so it comes from dnd-kit's keyboard coordinates with this layout, not from a recent change. Cross-column drop by keyboard works and persists.
 - **Status:** left as is (out of scope for Phase 7). A custom `coordinateGetter` would fix it if it matters in the demo.
 
 ## 2026-10-22 · Test setup notes
 - Real-browser checks (drag, touch, keyboard, 375px, dark mode) ran with `puppeteer-core` and the installed Chrome, kept outside the repo. Lighthouse ran with `npx lighthouse` and a forged Auth.js session cookie.
 - `npm run seed -- email` needs `tsx` (devDependency) because `db.ts` and the models use the `@/` alias.
+
+## 2026-10-23 · Phone: long-press drag on the whole card didn't work (Phase 7)
+- **Symptom:** on the phone-sized board nothing could be dragged by touch, while Tab/arrow keys and sideways scrolling worked. The same long-press drag passed in my automated Chrome run (raw touch events), so it only failed in the user's setup.
+- **Root cause (likely, not reproduced):** the card is one big link inside a sideways-scrolling container. Browsers use a long press or a small finger move for link menus, text selection and starting a scroll, which cancels the touch sequence before dnd-kit's 200 ms delay finishes. I could not reproduce DevTools' mouse-as-touch mode: puppeteer's `mouse.down` hangs in that mode even on an empty page.
+- **Fix:** each card has a drag handle (`touch-action: none`, top right). `TouchSensor` has a 5 px distance constraint and is only started from the handle (`onTouchStart` is filtered in `IssueCard`), so a finger drags immediately from the handle and a swipe anywhere else scrolls the board. Mouse and keyboard still grab the whole card. Cards also got `select-none` and `-webkit-touch-callout: none`.
+- **Verified (raw touch events, 375px):** drag from the handle moves and persists; swipe from the card body scrolls 16 → 324 without moving a card; tap opens the issue; desktop mouse drag from the card body still works.
+- **Rule:** On touch screens give draggable items in a scrolling area a dedicated handle with `touch-action: none` instead of relying on long-press.

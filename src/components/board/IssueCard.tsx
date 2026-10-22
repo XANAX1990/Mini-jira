@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -60,19 +61,37 @@ export function IssueCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: cardId(issue.number),
   });
+  const handleRef = useRef<HTMLSpanElement>(null);
+
+  // Mouse and keyboard can grab the whole card, but a finger only drags by the handle:
+  // the rest of the card must stay free so a swipe scrolls the board instead of fighting the drag.
+  const { onTouchStart, ...otherListeners } = listeners ?? {};
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`${card} ${isDragging ? "opacity-40" : ""}`}
+      className={`${card} relative select-none [-webkit-touch-callout:none] ${isDragging ? "opacity-40" : ""}`}
       {...attributes}
-      {...listeners}
+      {...otherListeners}
+      onTouchStart={(e) => {
+        if (handleRef.current?.contains(e.target as Node)) (onTouchStart as (e: React.TouchEvent) => void)?.(e);
+      }}
       // dnd-kit sets role="button", but the card contains a link: nested interactive roles are invalid.
       role="group"
       aria-label={`${projectKey}-${issue.number}: ${issue.title}`}
     >
       <IssueCardView projectKey={projectKey} issue={issue} assignee={assignee} />
+      <span
+        ref={handleRef}
+        aria-hidden="true"
+        title="Drag to move"
+        className="absolute top-0 right-0 flex h-9 w-9 cursor-grab touch-none items-center justify-center text-zinc-600 dark:text-zinc-400"
+      >
+        <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor">
+          {[3, 8, 13].flatMap((y) => [2, 8].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" />))}
+        </svg>
+      </span>
     </div>
   );
 }
