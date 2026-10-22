@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { isHttpsRequest } from "@/lib/secure-request";
 
 // First line of defense only: pages still call requireUser().
 // Read-only on purpose: the NextAuth() `auth` wrapper re-issues the session
@@ -8,7 +9,9 @@ import { getToken } from "next-auth/jwt";
 // It also sends signed-in users away from the landing and login pages, so those two
 // pages never read the session themselves and stay fully static (see LESSONS.md).
 export async function proxy(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+  // getToken defaults to the http cookie name; on https Auth.js uses the `__Secure-` one.
+  const secureCookie = isHttpsRequest(request.headers, request.nextUrl.protocol);
+  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET, secureCookie });
   const signedIn = !!token?.id;
   const { pathname } = request.nextUrl;
 
