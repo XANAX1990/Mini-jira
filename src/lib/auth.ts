@@ -22,7 +22,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             $set: { name: user.name ?? user.email, image: user.image ?? undefined },
             $setOnInsert: { email: user.email.toLowerCase() },
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: "after" }
         );
         token.id = doc._id.toString();
       }

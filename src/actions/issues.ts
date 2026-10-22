@@ -77,7 +77,7 @@ export async function createIssue(
   const bumped = await ProjectModel.findOneAndUpdate(
     { _id: project._id },
     { $inc: { issueCounter: 1 } },
-    { new: true }
+    { returnDocument: "after" }
   ).lean();
   if (!bumped) return accessError("not_found");
 
