@@ -189,10 +189,10 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] `scripts/seed.ts` (`npm run seed`): creates a demo project `DEMO` with ~15 realistic issues across all columns for the signed-in user's email (passed as an argument). Refuses to run when `NODE_ENV=production`.
 
 **Verify**
-- [ ] Filters combine correctly and survive a refresh / shared URL.
-- [ ] Lighthouse accessibility score ≥ 90 on the board page.
-- [ ] Works at 375 px width.
-- [ ] Global checks pass.
+- [x] Filters combine correctly and survive a refresh / shared URL.
+- [x] Lighthouse accessibility score ≥ 90 on the board page.
+- [x] Works at 375 px width.
+- [x] Global checks pass.
 
 ---
 
