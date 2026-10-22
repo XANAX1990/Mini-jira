@@ -121,11 +121,11 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] Revalidate the affected pages after each action.
 
 **Verify**
-- [ ] Create 3 issues → `MJ-1`, `MJ-2`, `MJ-3` in order. Deleting `MJ-2` and creating a new one gives `MJ-4` (numbers are never reused).
-- [ ] Editing each field persists after a refresh.
-- [ ] As a member (not admin), the delete button is hidden **and** calling the action directly returns `forbidden`.
-- [ ] Assigning to a non-member user ID is rejected.
-- [ ] Global checks pass.
+- [x] Create 3 issues → `MJ-1`, `MJ-2`, `MJ-3` in order. Deleting `MJ-2` and creating a new one gives `MJ-4` (numbers are never reused).
+- [x] Editing each field persists after a refresh.
+- [x] As a member (not admin), the delete button is hidden **and** calling the action directly returns `forbidden`.
+- [x] Assigning to a non-member user ID is rejected.
+- [x] Global checks pass.
 
 ---
 
