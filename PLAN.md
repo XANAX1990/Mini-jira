@@ -12,6 +12,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 6: Members & roles management
 - [x] Phase 7: Polish (filters, search, UX states, seed data)
 - [x] Phase 8: Tests, deploy, docs
+- [ ] Phase 9: Sign in with Google
 
 ---
 
@@ -217,6 +218,37 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 ---
 
 **Not done (decisions):** the optional Playwright smoke test was skipped; the browser flows were checked by hand and with throwaway Chrome scripts that are not in the repo. `README.md` replaces the stock create-next-app file and the misspelled `READMEE.md`.
+
+## Phase 9: Sign in with Google
+
+**Goal:** Users can sign in with Google as well as GitHub. The same email through either provider is the same user, with the same projects.
+
+**Decisions**
+- Auth.js `Google` provider (OIDC), same JWT sessions and no database adapter. With no adapter there is no `OAuthAccountNotLinked` error: linking is whatever our own code does, so it must be done on purpose.
+- **Link by email.** Reuse the existing upsert by lower-cased email. GitHub and Google with the same email resolve to one `users` document and one `_id`; `Project.members.userId` and `Issue` references keep working untouched. No schema change.
+- **Only verified Google emails.** Reject the sign-in unless the Google profile has `email_verified === true` (an unverified email must never be able to take over someone else's account).
+- Known residual risk (not changed in this phase): Auth.js' GitHub provider picks the *primary* email without checking `verified`. GitHub only lets a verified address be primary, so we rely on that.
+- The Google button only shows when `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are set, so deploying the code before the credentials exist cannot leave a broken button.
+- Keep `/` and `/login` static (no session reads in the page; see LESSONS.md). Auth errors go to `/login?error=...` and a small client component shows a message.
+
+**Tasks**
+- [ ] `src/lib/auth-callbacks.ts`: `isSignInAllowed` (email required; Google needs `email_verified === true`) and `upsertUser` (by lower-cased email, safe when two sign-ins race), used by `src/lib/auth.ts`.
+- [ ] Google provider in `src/lib/auth.config.ts`, enabled only when both env vars are set (`src/lib/providers.ts`). `pages.error` points at `/login`.
+- [ ] Server action `signInWithGoogle`; login page and landing page show two buttons ("Sign in with GitHub", "Sign in with Google"); friendly error message from `?error=`.
+- [ ] `.env.example`: `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`. README: features, env table, Google OAuth setup, deploy step, troubleshooting, design decision.
+- [ ] Unit tests for `isSignInAllowed` and `upsertUser`.
+
+**Needs from me:** a Google OAuth client (Google Cloud Console → APIs & Services → OAuth consent screen, then Credentials → OAuth client ID → Web application) with the redirect URIs `http://localhost:3000/api/auth/callback/google` and `https://mini-jira-tan.vercel.app/api/auth/callback/google`; put the ID and secret in `.env.local` and in Vercel. The agent will give the exact steps in its report.
+
+**Verify**
+- [ ] `npm run build && npm start` with the Google env vars set: `/` and `/login` are still static, show both buttons, and the server log has no errors. Without the env vars only the GitHub button shows.
+- [ ] The Google sign-in redirect sets the PKCE/state cookies (`__Secure-` names on https) and points at `accounts.google.com` with the right `redirect_uri`.
+- [ ] Same email through GitHub and then Google (or the reverse): exactly one document in `users`, same `_id`, same projects visible. Checked with the real upsert code against the database, and by hand with real accounts.
+- [ ] A Google account with `email_verified: false` is refused (unit test, and a message on `/login`).
+- [ ] Sign in with Google works on localhost with a real Google account.
+- [ ] Global checks pass.
+
+---
 
 ## Out of scope / later
 
