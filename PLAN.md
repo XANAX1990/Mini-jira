@@ -77,11 +77,11 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Needs from me:** create a GitHub OAuth App (callback `http://localhost:3000/api/auth/callback/github`) and put the credentials in `.env.local`. Tell me the exact steps in the report.
 
 **Verify**
-- [ ] Signed out: visiting `/projects` redirects to `/login`.
-- [ ] Sign in with GitHub → lands on `/projects`, header shows my GitHub avatar and name.
-- [ ] A document appears in `users`. Signing in again doesn't create a duplicate.
-- [ ] Sign out works and `/projects` is protected again.
-- [ ] Global checks pass.
+- [x] Signed out: visiting `/projects` redirects to `/login`.
+- [x] Sign in with GitHub → lands on `/projects`, header shows my GitHub avatar and name.
+- [x] A document appears in `users`. Signing in again doesn't create a duplicate.
+- [x] Sign out works and `/projects` is protected again.
+- [x] Global checks pass.
 
 ---
 
