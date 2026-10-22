@@ -145,11 +145,11 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] Keyboard-accessible dragging (dnd-kit keyboard sensor).
 
 **Verify**
-- [ ] Reorder within a column and move across columns; order survives a hard refresh.
-- [ ] Each move updates exactly one document in the normal case (log or check in Atlas).
-- [ ] Force a rebalance (e.g. a unit test or script that drops 60 cards into the same gap) → order stays correct.
-- [ ] Simulated failure (throw in the action) → card snaps back and an error shows.
-- [ ] Global checks pass.
+- [x] Reorder within a column and move across columns; order survives a hard refresh.
+- [x] Each move updates exactly one document in the normal case (log or check in Atlas).
+- [x] Force a rebalance (e.g. a unit test or script that drops 60 cards into the same gap) → order stays correct.
+- [x] Simulated failure (throw in the action) → card snaps back and an error shows.
+- [x] Global checks pass.
 
 ---
 
