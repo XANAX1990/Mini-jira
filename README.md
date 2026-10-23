@@ -33,7 +33,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 | Add members by email, change roles, remove members, last-admin guard | ✅ |
 | Filters and title search on the board, kept in the URL | ✅ |
 | Theme switch: Light / Dark / System (remembered in the browser), responsive down to 375 px | ✅ |
-| Optional alert to n8n (→ LINE) when an issue is created or its priority changes, signed and never blocking | ✅ |
+| **LINE alerts via n8n** (optional): a signed message when an issue is created or its priority changes; only fires while n8n and ngrok are running | ✅ |
 | Demo data script (`npm run seed`) | ✅ |
 
 ## Tech stack
@@ -45,6 +45,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 - **Drag & drop:** dnd-kit
 - **Validation:** Zod
 - **Tests:** Vitest
+- **Alerts (optional):** n8n (self-hosted, behind ngrok) → LINE Messaging API
 - **Deploy:** Vercel + MongoDB Atlas (free tiers)
 
 ## Architecture
@@ -55,8 +56,9 @@ Browser ──► Next.js (App Router)
               ├─ Server Actions     → every write (create/move/delete issue, manage members)
               │     └─ permission check on the server, every time
               ├─ proxy.ts           → first line of defense: signed-out users go to /login
-              └─ Auth.js            → GitHub OAuth, session in a signed JWT
-                        │
+              ├─ Auth.js            → GitHub / Google sign-in, session in a signed JWT
+              └─ after()            → signed webhook (HMAC) to n8n → LINE push message
+                        │                 (optional; only while n8n + ngrok run)
                         ▼
                  MongoDB Atlas (users, projects, issues)
 ```
@@ -202,6 +204,8 @@ The database is mocked, so these tests check the logic and the shape of the quer
 4. In Atlas → *Network Access*, allow Vercel. Vercel has no fixed IP on the free plan, so use `0.0.0.0/0` and rely on the database user's password.
 5. Redeploy, then open the **production domain** (*Settings → Domains*) and sign in there. The long per-deployment URLs (`<project>-<hash>-<team>.vercel.app`) are behind Vercel Authentication and break the OAuth round trip.
 6. Optional: seed demo data from your machine by pointing `MONGODB_URI` in `.env.local` at the production database for one run of `npm run seed -- your@email`, then put it back.
+
+Vercel only applies a changed or new environment variable to **new deployments**: after editing any variable (for example `N8N_WEBHOOK_URL`), click *Redeploy*.
 
 After changing `AUTH_SECRET`, everyone is signed out; clear the site's cookies before testing sign-in again.
 
