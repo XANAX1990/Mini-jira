@@ -23,7 +23,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 | Per-project roles: **Admin** and **Member** | ✅ |
 | Add members by email, change roles, remove members, last-admin guard | ✅ |
 | Filters and title search on the board, kept in the URL | ✅ |
-| Dark mode (follows the system), responsive down to 375 px | ✅ |
+| Theme switch: Light / Dark / System (remembered in the browser), responsive down to 375 px | ✅ |
 | Demo data script (`npm run seed`) | ✅ |
 
 ## Tech stack
@@ -92,6 +92,7 @@ A project must always have at least one admin. The last admin cannot be demoted 
 - **Issue numbers come from an atomic counter.** Creating an issue runs `$inc` on `Project.issueCounter` and uses the returned value. Numbers are never reused after a delete. The unique index catches anything that slips through.
 - **Card order is a float, computed on the server.** A card dropped between two others gets the midpoint of their `order` values, so a move updates **one** document instead of renumbering the column. The client only says which two cards it landed between; the server reads their current values. When the gap gets below 0.001 (after about 20 drops into the same spot), the column is renumbered once in a single `bulkWrite`.
 - **The last-admin guard lives inside the database update.** Demoting or removing an admin only matches while another admin exists (`$elemMatch` in the filter of the same `updateOne`), so two admins demoting each other at the same moment cannot leave a project without an admin.
+- **Theme is a class, chosen by the user.** Dark mode is a `dark` class on `<html>` (Tailwind's `dark:` variant is redefined once in `globals.css`), set by a tiny inline script in `<head>` before the first paint and changed by the switch in the header. The choice (`light` / `dark`; nothing stored means *System*, which follows the OS live) lives in `localStorage`, so it is per browser and needs no server round trip. That keeps `/` and `/login` fully static, and `color-scheme` follows the class so native selects and scrollbars match too.
 - **Optimistic board.** `useOptimistic` shows the move instantly; if the action fails, the card snaps back and a toast explains why.
 - **Touch dragging uses a handle.** The cards are links inside a sideways-scrolling board, so a finger drags by the handle (`touch-action: none`) and a swipe anywhere else scrolls. Mouse and keyboard grab the whole card.
 - **Filters live in the URL** (`?assignee=me&type=bug&q=login`), parsed with Zod on the server, so a refresh or a shared link shows the same board.
@@ -151,13 +152,14 @@ The same email through GitHub and Google is **one user**: they get the same proj
 
 ## Testing
 
-`npm test` runs 72 unit tests:
+`npm test` runs 82 unit tests:
 
 - `src/lib/order.test.ts`: midpoint, top, bottom and empty column; when a rebalance is needed (exactly after 20 halvings); renumbering in a single `bulkWrite`; 60 cards dropped into the same gap stay in order.
 - `src/lib/permissions.test.ts`: member, admin and non-member for `getMembership`, `requireMember`, `requireAdmin` and the non-throwing variants used by Server Actions.
 - `src/proxy.test.ts`: the signed-in / signed-out redirects with real tokens, on https (cookie `__Secure-authjs.session-token`), on http, and behind a proxy. This is the regression test for a production-only login loop.
 - `src/lib/auth-callbacks.test.ts`: only verified Google emails get in, no email means no sign-in, GitHub and Google with the same email (any casing) look up the same document, an avatar is not blanked by a provider without one, and a lost race on the unique email index is retried.
 - `src/lib/github-profile.test.ts`: the GitHub email lookup only returns verified addresses (primary first), keeps the public email without an extra request, and gives no email when nothing is verified.
+- `src/lib/theme.test.ts`: which choice wins over the OS, and the inline theme script itself, run against fake `localStorage` / `matchMedia` (stored light or dark, nothing stored, junk values, storage blocked, no `matchMedia`).
 - `src/actions/members.test.ts`: the last-admin guard when demoting and removing, adding by email, issues unassigned when a member is removed.
 
 The database is mocked, so these tests check the logic and the shape of the queries, not MongoDB itself. I checked the real behavior (including two admins demoting each other at the same time, and 60 drops into one gap) against Atlas by hand. There is no browser end-to-end test in the repo.

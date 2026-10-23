@@ -123,3 +123,11 @@
 - **Test gap I caught:** my first test list put the primary email last, so a mutation that took the last verified address passed. Added cases with the primary first, middle and last. **Rule:** when a mutation survives, fix the test, not the mutation.
 - **Not verifiable here:** a real GitHub sign-in. Test it on localhost and after the deploy; if it breaks, revert the commit that touched `auth.config.ts` and `github-profile.ts`.
 
+## 2026-10-23 · Theme setting that did nothing (Phase 10)
+- **Symptom:** the app was dark while a "Theme: Light" setting was selected, and changing it changed nothing.
+- **Cause:** that setting was in the **Next.js Dev Tools panel** (the round N button, `next dev` only). It only restyles the panel itself and is not part of the app. The app had no theme control at all: Tailwind's default `dark:` variant follows `prefers-color-scheme`, so only the OS decided.
+- **Fix:** a real switch (Light / Dark / System). `@custom-variant dark (&:where(.dark, .dark *))` in `globals.css` makes every existing `dark:` class follow a `dark` class on `<html>`; the CSS variables and `color-scheme` follow the same class; an inline script in `<head>` sets the class before first paint (`suppressHydrationWarning` on `<html>`); the choice is in `localStorage` (nothing stored = System, which follows the OS live). `/` and `/login` stay static. The dev-tools panel can be hidden with `devIndicators: false` in `next.config.ts` if it keeps confusing people.
+- **Easy to miss:** two `@media (prefers-color-scheme: dark)` blocks in `globals.css` (the colour variables and the select arrow) also had to become `.dark` rules, otherwise the page and the controls disagree when the user picks the opposite of the OS. `grep -rn prefers-color-scheme src` should only find `src/lib/theme.ts`.
+- **Tooling note:** in puppeteer, opening a second tab sends the first one to the background and clicks on it hang until `page.bringToFront()`. My first run hung and was killed by `timeout`.
+- **Rule:** dark-mode CSS uses `dark:` or `.dark`, never `@media (prefers-color-scheme: dark)`.
+

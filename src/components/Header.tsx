@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { signOutAction } from "@/actions/auth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export async function Header() {
   const user = await requireUser();
@@ -11,6 +12,7 @@ export async function Header() {
         Mini Jira
       </Link>
       <div className="flex items-center gap-3 text-sm">
+        <ThemeToggle />
         {user.image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.image} alt="" className="h-7 w-7 rounded-full" />
