@@ -12,7 +12,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 6: Members & roles management
 - [x] Phase 7: Polish (filters, search, UX states, seed data)
 - [x] Phase 8: Tests, deploy, docs
-- [ ] Phase 9: Sign in with Google
+- [x] Phase 9: Sign in with Google
 
 ---
 
@@ -243,9 +243,9 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 **Verify**
 - [x] `npm run build && npm start` with the Google env vars set: `/` and `/login` are still static (`○`), show both buttons, and the server log has no errors. With the variables forced empty only the GitHub button shows and the server lists only the `github` provider. Accessibility 100 on `/` and `/login` (light/dark).
 - [x] The Google sign-in redirect sets the PKCE cookie (`__Secure-authjs.pkce.code_verifier` on https; Google's flow has no separate state cookie) and points at `accounts.google.com` with the right `redirect_uri`. Google accepts both of the owner's redirect URIs (localhost and production); a bogus one is refused with `redirect_uri_mismatch`.
-- [ ] Same email through GitHub and then Google (or the reverse): exactly one document in `users`, same `_id`, same projects visible. **Done with the real upsert code against the database** (GitHub then Google, Google then GitHub, 8 simultaneous first sign-ins: one document, one `_id`, project still visible). **Still to do by hand with real accounts.**
+- [x] Same email through GitHub and then Google (or the reverse): exactly one document in `users`, same `_id`, same projects visible. Done with the real upsert code against the database (GitHub then Google, Google then GitHub, 8 simultaneous first sign-ins: one document, one `_id`, project still visible), and by hand with real accounts (owner, 2026-10-23).
 - [x] A Google account with `email_verified: false` is refused (unit tests incl. missing, non-boolean and `"true"`; mutation-checked) and `/login?error=AccessDenied` shows a message. Not exercised end to end: Auth.js turning a `false` from the signIn callback into `?error=AccessDenied` (documented behavior, needs a real unverified Google account).
-- [ ] Sign in with Google works on localhost with a real Google account.
+- [x] Sign in with Google works on localhost with a real Google account (owner, 2026-10-23).
 - [x] Global checks pass (tsc, lint, 62 tests, build).
 
 ---
