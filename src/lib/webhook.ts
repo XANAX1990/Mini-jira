@@ -8,16 +8,18 @@ import { UserModel } from "@/models/User";
 // the way of an issue action. Nothing in here may throw into the caller, nothing awaits the
 // network before the action answers, and an unset N8N_WEBHOOK_URL means "do nothing, quietly".
 
-export type WebhookEvent = "issue.created" | "issue.priority_high";
+export type WebhookEvent = "issue.created" | "issue.priority_changed";
 
 export type IssueWebhookPayload = {
   event: WebhookEvent;
-  /** Ready-to-show wording for the event, so n8n does not have to translate `event`. */
+  /** Ready-to-show wording (Thai) for the event, so n8n does not have to translate `event`. */
   label: string;
   projectKey: string;
   number: number;
   title: string;
   priority: string;
+  /** The priority before a change; `null` for a new issue. */
+  previousPriority: string | null;
   assignee: string | null;
   url: string;
   sentAt: string;
@@ -25,25 +27,20 @@ export type IssueWebhookPayload = {
 
 export const WEBHOOK_TIMEOUT_MS = 3000;
 
-/** What each event is called in the message (n8n shows `label`, not `event`). */
-export const EVENT_LABELS: Record<WebhookEvent, string> = {
-  "issue.created": "🆕 New HIGH issue",
-  "issue.priority_high": "🔴 Raised to HIGH",
-};
+/** What the event is called in the message (n8n shows `label`, not `event`). */
+export function eventLabel(event: WebhookEvent, previousPriority: string | null, priority: string): string {
+  if (event === "issue.created") return "Issue ใหม่";
+  return `เปลี่ยน priority: ${(previousPriority ?? "?").toUpperCase()} → ${priority.toUpperCase()}`;
+}
 
 /** `sha256=<hex>`: HMAC-SHA256 of exactly this body string. */
 export function signBody(body: string, secret: string): string {
   return "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
 }
 
-/** A new issue only sends an alert when it is created as high. Medium and low are not worth a message. */
-export function shouldNotifyOnCreate(priority: string | null | undefined): boolean {
-  return priority === "high";
-}
-
-/** Only the moment the priority *becomes* high counts; saving a high issue again does not. */
-export function isPriorityRaisedToHigh(previous: string | null | undefined, next: string | null | undefined): boolean {
-  return next === "high" && previous !== "high";
+/** Any real change of priority counts; saving the same priority again (the edit form resends everything) does not. */
+export function hasPriorityChanged(previous: string | null | undefined, next: string | null | undefined): boolean {
+  return next !== undefined && next !== null && next !== previous;
 }
 
 export function issueUrl(origin: string, projectKey: string, number: number): string {
@@ -56,17 +53,19 @@ export function buildPayload(input: {
   number: number;
   title: string;
   priority: string;
+  previousPriority?: string | null;
   assignee: string | null;
   origin: string;
   now: Date;
 }): IssueWebhookPayload {
   return {
     event: input.event,
-    label: EVENT_LABELS[input.event],
+    label: eventLabel(input.event, input.previousPriority ?? null, input.priority),
     projectKey: input.projectKey,
     number: input.number,
     title: input.title,
     priority: input.priority,
+    previousPriority: input.previousPriority ?? null,
     assignee: input.assignee,
     url: issueUrl(input.origin, input.projectKey, input.number),
     sentAt: input.now.toISOString(),
@@ -175,6 +174,7 @@ export async function scheduleIssueWebhook(input: {
   number: number;
   title: string;
   priority: string;
+  previousPriority?: string | null;
   assigneeId: string | null;
 }): Promise<void> {
   try {

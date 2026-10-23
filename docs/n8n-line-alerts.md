@@ -1,6 +1,6 @@
 # Mini Jira → n8n → LINE alerts
 
-Mini Jira can POST a small signed message to an n8n webhook when a **high-priority** issue appears: an issue **created as high**, or an existing issue whose priority is **raised to high**. Medium and low issues send nothing. This guide builds the n8n side: **Webhook → verify the signature → LINE push message**.
+Mini Jira can POST a small signed message to an n8n webhook when an issue is **created** (any priority) or when its **priority changes** (any change: low, medium, high). This guide builds the n8n side: **Webhook → verify the signature → LINE push message**.
 
 > **What was tested.** The Mini Jira side (signing, timeout, never blocking, silent skip) is covered by unit tests and was run against a local stand-in for n8n. Every expression below was run in plain JavaScript against the exact data shape n8n's Webhook node produces. The owner ran the whole chain (Mini Jira → n8n → LINE) end to end with a separate LINE Official Account. Node option names can differ a little between n8n versions; if a label does not match, look for the closest one.
 
@@ -17,19 +17,21 @@ Body (one line of JSON, keys in this order):
 ```json
 {
   "event": "issue.created",
-  "label": "🆕 New HIGH issue",
+  "label": "Issue ใหม่",
   "projectKey": "MJ",
   "number": 12,
   "title": "Login redirects to a blank page",
   "priority": "high",
+  "previousPriority": null,
   "assignee": "Ann",
   "url": "https://mini-jira-tan.vercel.app/projects/MJ/issues/12",
   "sentAt": "2026-10-23T08:00:00.000Z"
 }
 ```
 
-- `event` is `issue.created` (only when the issue is created with priority high) or `issue.priority_high` (the priority changed *to* high; saving an issue that was already high sends nothing). Creating a medium or low issue sends nothing.
-- `label` is ready-to-show wording for the event: `🆕 New HIGH issue` or `🔴 Raised to HIGH`. Show it instead of translating `event` yourself.
+- `event` is `issue.created` (every new issue) or `issue.priority_changed` (the priority really changed; saving the same priority again sends nothing).
+- `previousPriority` is the priority before a change, `null` for a new issue.
+- `label` is ready-to-show Thai wording: `Issue ใหม่` for a new issue, `เปลี่ยน priority: MEDIUM → LOW` for a change. Show it instead of translating `event` yourself; colour by `priority` (🟢 low / 🟠 medium / 🔴 high).
 - `assignee` is the display name, or `null` when unassigned.
 - `sentAt` is inside the signed body so the receiver can refuse old copies.
 - It is fire-and-forget: if n8n is slow, down or answers an error, Mini Jira still saves the issue and only logs one line. **No retries**: a message sent while n8n (or ngrok, or your PC) is off is lost.
@@ -120,14 +122,14 @@ JSON (switch the field to *Expression*), with your own user ID in `to`:
 The text comes out as:
 
 ```
-🆕 New HIGH issue
+Issue ใหม่
 MJ-12 Login redirects to a blank page
 Priority: high
 Assignee: Ann
 https://mini-jira-tan.vercel.app/projects/MJ/issues/12
 ```
 
-(A raise starts with `🔴 Raised to HIGH`.) A LINE text message can hold 5000 characters; a title is at most 200.
+(A change starts with e.g. `เปลี่ยน priority: MEDIUM → LOW`. To add the colour dot, prefix it in the expression: `({low:'🟢',medium:'🟠',high:'🔴'}[$json.body.priority]) + ' ' + $json.body.label`.) A LINE text message can hold 5000 characters; a title is at most 200.
 
 Keep the LINE token in the credential, not typed into the node, so it stays out of exported workflows.
 
@@ -136,7 +138,7 @@ Keep the LINE token in the credential, not typed into the node, so it stays out 
 Activate the workflow (or use the Test URL while "Listen for test event" is on) and send a correctly signed message from your own machine:
 
 ```
-node -e "const c=require('crypto');const [s,u]=process.argv.slice(1);const b=JSON.stringify({event:'issue.created',label:'🆕 New HIGH issue',projectKey:'MJ',number:1,title:'Test alert',priority:'high',assignee:null,url:'https://example.com/projects/MJ/issues/1',sentAt:new Date().toISOString()});fetch(u,{method:'POST',headers:{'Content-Type':'application/json','X-Signature':'sha256='+c.createHmac('sha256',s).update(b).digest('hex')},body:b}).then(r=>console.log('HTTP',r.status))" "YOUR_SECRET" "https://your-name.ngrok-free.app/webhook/mini-jira"
+node -e "const c=require('crypto');const [s,u]=process.argv.slice(1);const b=JSON.stringify({event:'issue.created',label:'Issue ใหม่',previousPriority:null,projectKey:'MJ',number:1,title:'Test alert',priority:'high',assignee:null,url:'https://example.com/projects/MJ/issues/1',sentAt:new Date().toISOString()});fetch(u,{method:'POST',headers:{'Content-Type':'application/json','X-Signature':'sha256='+c.createHmac('sha256',s).update(b).digest('hex')},body:b}).then(r=>console.log('HTTP',r.status))" "YOUR_SECRET" "https://your-name.ngrok-free.app/webhook/mini-jira"
 ```
 
 You should see `HTTP 200`, one execution in n8n that reaches the HTTP Request node, and a LINE message. Run it again with a wrong secret: the execution should stop at the IF node.
@@ -151,7 +153,7 @@ You should see `HTTP 200`, one execution in n8n that reaches the HTTP Request no
 
 In Vercel, put the name in **Key** and only the value in **Value**, then **redeploy** so the new values are used. Restart `npm run dev` after editing `.env.local`.
 
-Then create an issue with priority **high** in Mini Jira: a LINE message should arrive within a couple of seconds. Raise an issue from medium to high: another one. Create a medium or low issue, edit a title or move a card: none.
+Then create an issue in Mini Jira (any priority): a LINE message should arrive within a couple of seconds. Change an issue's priority: another one. Edit a title, save the same priority again or move a card: none.
 
 If `N8N_WEBHOOK_URL` is empty, Mini Jira does nothing and logs nothing, so the app works normally while your PC is off.
 
@@ -159,7 +161,7 @@ If `N8N_WEBHOOK_URL` is empty, Mini Jira does nothing and logs nothing, so the a
 
 | What you see | Likely cause |
 |---|---|
-| No alert, but the app works | The priority was already high (only a change *to* high alerts), or the issue was created as medium/low |
+| No alert, but the app works | The priority was not actually changed (saving the same value sends nothing), or the edit was only a title / status / assignee change |
 | Nothing in n8n at all | n8n or ngrok is not running; the workflow is not **Published/Active** (production URL), or your last edit was saved but not published; the URL in Vercel still has the old ngrok address; Vercel was not redeployed after adding the variables |
 | n8n execution stops at the IF node | The secret differs between Mini Jira and the Crypto node (watch for spaces or a copied `KEY=`); the Crypto node's *Value* is not `JSON.stringify($json.body)`; your PC clock is more than 5 minutes off |
 | IF passes, LINE answers an error | `401`: wrong or expired channel access token, or the credential belongs to another Official Account. `400`: bad body, or a user ID from another provider. The bot must be a friend of the `to` user |

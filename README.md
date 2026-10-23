@@ -33,7 +33,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 | Add members by email, change roles, remove members, last-admin guard | ✅ |
 | Filters and title search on the board, kept in the URL | ✅ |
 | Theme switch: Light / Dark / System (remembered in the browser), responsive down to 375 px | ✅ |
-| Optional alert to n8n (→ LINE) when a high-priority issue appears (created as high, or raised to high), signed and never blocking | ✅ |
+| Optional alert to n8n (→ LINE) when an issue is created or its priority changes, signed and never blocking | ✅ |
 | Demo data script (`npm run seed`) | ✅ |
 
 ## Tech stack
@@ -156,14 +156,14 @@ The same email through GitHub and Google is **one user**: they get the same proj
 
 ### Alerts to n8n (optional)
 
-When an issue is **created as high**, or its priority is **raised to high**, Mini Jira POSTs a small JSON message to `N8N_WEBHOOK_URL`:
+When an issue is **created** (any priority), or its **priority changes** (any change), Mini Jira POSTs a small JSON message to `N8N_WEBHOOK_URL`:
 
 ```json
-{ "event": "issue.created", "label": "🆕 New HIGH issue", "projectKey": "MJ", "number": 12, "title": "…", "priority": "high",
-  "assignee": "Ann", "url": "https://…/projects/MJ/issues/12", "sentAt": "2026-10-23T08:00:00.000Z" }
+{ "event": "issue.created", "label": "Issue ใหม่", "projectKey": "MJ", "number": 12, "title": "…", "priority": "high",
+  "previousPriority": null, "assignee": "Ann", "url": "https://…/projects/MJ/issues/12", "sentAt": "2026-10-23T08:00:00.000Z" }
 ```
 
-The header `X-Signature: sha256=<hex>` is the HMAC-SHA256 of the exact body with `N8N_WEBHOOK_SECRET`. The call runs after the action has answered (Next's `after()`), with a 3 second timeout: a slow, dead or erroring n8n never blocks or fails an issue action, it only logs one line (never the URL, the secret or the body). If `N8N_WEBHOOK_URL` is not set, nothing happens. Medium and low issues never send anything, and saving an issue that was already high does not send again. `label` (`🆕 New HIGH issue` or `🔴 Raised to HIGH`) is ready-to-show wording, so n8n does not have to translate `event`.
+The header `X-Signature: sha256=<hex>` is the HMAC-SHA256 of the exact body with `N8N_WEBHOOK_SECRET`. The call runs after the action has answered (Next's `after()`), with a 3 second timeout: a slow, dead or erroring n8n never blocks or fails an issue action, it only logs one line (never the URL, the secret or the body). If `N8N_WEBHOOK_URL` is not set, nothing happens. A change uses `"event": "issue.priority_changed"` with `previousPriority`; saving the same priority again sends nothing. `label` is ready-to-show Thai wording (`Issue ใหม่`, `เปลี่ยน priority: MEDIUM → LOW`), so n8n does not have to translate `event`.
 
 My n8n runs on my own machine behind ngrok, so **alerts only arrive while that machine, n8n and ngrok are on**. There are no retries; a message sent while it is off is lost, and the app itself works the same. How to build the n8n side (Webhook, verify the signature, LINE push message): [`docs/n8n-line-alerts.md`](docs/n8n-line-alerts.md).
 
@@ -179,7 +179,7 @@ My n8n runs on my own machine behind ngrok, so **alerts only arrive while that m
 
 ## Testing
 
-`npm test` runs 122 unit tests:
+`npm test` runs 121 unit tests:
 
 - `src/lib/order.test.ts`: midpoint, top, bottom and empty column; when a rebalance is needed (exactly after 20 halvings); renumbering in a single `bulkWrite`; 60 cards dropped into the same gap stay in order.
 - `src/lib/permissions.test.ts`: member, admin and non-member for `getMembership`, `requireMember`, `requireAdmin` and the non-throwing variants used by Server Actions.
@@ -188,7 +188,7 @@ My n8n runs on my own machine behind ngrok, so **alerts only arrive while that m
 - `src/lib/github-profile.test.ts`: the GitHub email lookup only returns verified addresses (primary first), keeps the public email without an extra request, and gives no email when nothing is verified.
 - `src/lib/theme.test.ts`: which choice wins over the OS, and the inline theme script itself, run against fake `localStorage` / `matchMedia` (stored light or dark, nothing stored, junk values, storage blocked, no `matchMedia`).
 - `src/lib/webhook.test.ts`: the signature (RFC 4231 test vector), that the body survives `JSON.parse` + `JSON.stringify` unchanged (n8n re-signs the parsed body), no request when the URL is unset or the secret is missing, a real local server that never answers (the 3 second timeout, shortened), non-2xx and network errors swallowed, no URL / secret / title in the log, and where the link's address comes from.
-- `src/actions/issues.test.ts`: `createIssue` and `updateIssue` with the real webhook code: one alert on create, one when the priority becomes high, none for any other edit, nothing sent before the action has answered, and a dead webhook or a failing `after()` never fails the action.
+- `src/actions/issues.test.ts`: `createIssue` and `updateIssue` with the real webhook code: one alert on every create, one on every real priority change, none for any other edit, nothing sent before the action has answered, and a dead webhook or a failing `after()` never fails the action.
 - `src/actions/members.test.ts`: the last-admin guard when demoting and removing, adding by email, issues unassigned when a member is removed.
 
 The database is mocked, so these tests check the logic and the shape of the queries, not MongoDB itself. I checked the real behavior (including two admins demoting each other at the same time, and 60 drops into one gap) against Atlas by hand. There is no browser end-to-end test in the repo.

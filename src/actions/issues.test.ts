@@ -101,7 +101,8 @@ describe("createIssue and the n8n webhook", () => {
     expect(sentBodies()).toHaveLength(1);
     expect(sentBodies()[0]).toMatchObject({
       event: "issue.created",
-      label: "🆕 New HIGH issue",
+      label: "Issue ใหม่",
+      previousPriority: null,
       projectKey: "MJ",
       number: 12,
       title: "Printer on fire",
@@ -118,15 +119,16 @@ describe("createIssue and the n8n webhook", () => {
     expect(sentBodies()[0]).toMatchObject({ event: "issue.created", priority: "high", assignee: "Ann" });
   });
 
-  it("creating a medium or low issue sends nothing (no default priority either)", async () => {
+  it("every new issue is announced, whatever its priority (the default is medium)", async () => {
     for (const input of [{ title: "Default" }, { title: "Medium", priority: "medium" }, { title: "Low", priority: "low" }]) {
-      const res = await createIssue("MJ", input);
-      expect(res.ok).toBe(true);
+      expect((await createIssue("MJ", input)).ok).toBe(true);
     }
     await flushAfter();
-    expect(mocks.issueCreate).toHaveBeenCalledTimes(3); // the issues are created...
-    expect(mocks.after).not.toHaveBeenCalled(); // ...and nobody is told
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sentBodies().map((b) => [b.event, b.priority, b.label])).toEqual([
+      ["issue.created", "medium", "Issue ใหม่"],
+      ["issue.created", "medium", "Issue ใหม่"],
+      ["issue.created", "low", "Issue ใหม่"],
+    ]);
   });
 
   it("sends nothing and schedules nothing when the webhook is not configured", async () => {
@@ -176,11 +178,20 @@ describe("updateIssue and the n8n webhook", () => {
     return { res, issue };
   }
 
-  it("sends one message when the priority becomes high", async () => {
-    const { res } = await update({ priority: "high" });
-    expect(res.ok).toBe(true);
-    expect(sentBodies()).toHaveLength(1);
-    expect(sentBodies()[0]).toMatchObject({ event: "issue.priority_high", label: "🔴 Raised to HIGH", projectKey: "MJ", number: 7, title: "Old title", priority: "high", assignee: null, url: "https://app.example.com/projects/MJ/issues/7" });
+  it("sends one message for any priority change, with the old and the new priority", async () => {
+    const cases: Array<[string, string, string]> = [
+      ["medium", "high", "เปลี่ยน priority: MEDIUM → HIGH"],
+      ["medium", "low", "เปลี่ยน priority: MEDIUM → LOW"],
+      ["low", "medium", "เปลี่ยน priority: LOW → MEDIUM"],
+      ["high", "low", "เปลี่ยน priority: HIGH → LOW"],
+    ];
+    for (const [from, to, label] of cases) {
+      fetchMock.mockClear();
+      const { res } = await update({ priority: to }, existingIssue({ priority: from }));
+      expect(res.ok).toBe(true);
+      expect(sentBodies()).toHaveLength(1);
+      expect(sentBodies()[0]).toMatchObject({ event: "issue.priority_changed", label, projectKey: "MJ", number: 7, title: "Old title", priority: to, previousPriority: from, assignee: null, url: "https://app.example.com/projects/MJ/issues/7" });
+    }
   });
 
   it("uses the title and assignee as they are after this edit", async () => {
@@ -188,15 +199,14 @@ describe("updateIssue and the n8n webhook", () => {
     expect(sentBodies()[0]).toMatchObject({ title: "New title", assignee: "Ann" });
   });
 
-  it("sends nothing when it was already high (the edit form resends every field)", async () => {
+  it("sends nothing when the priority is unchanged (the edit form resends every field)", async () => {
     await update({ title: "Renamed", priority: "high", status: "todo" }, existingIssue({ priority: "high" }));
+    await update({ priority: "medium" }); // existingIssue() is medium
     expect(fetchMock).not.toHaveBeenCalled();
     expect(scheduled).toHaveLength(0);
   });
 
-  it("sends nothing for other priority changes or other edits", async () => {
-    await update({ priority: "low" });
-    await update({ priority: "medium" }); // unchanged
+  it("sends nothing for edits that leave the priority alone", async () => {
     await update({ title: "Just a rename" });
     await update({ status: "done" });
     await update({ assigneeId: ASSIGNEE.toString(), description: "text", type: "bug" });

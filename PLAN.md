@@ -280,11 +280,11 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 
 ## Phase 11: Outbound notification to n8n
 
-**Goal:** When an issue is created as **high**, or its priority is changed to **high**, Mini Jira POSTs a small signed JSON message to an n8n webhook (n8n then sends a LINE message). Mini Jira must keep working exactly as before when the webhook is unset, slow or down.
+**Goal:** When an issue is created, or its priority changes, Mini Jira POSTs a small signed JSON message to an n8n webhook (n8n then sends a LINE message). Mini Jira must keep working exactly as before when the webhook is unset, slow or down.
 
 **Decisions**
-- **Two triggers, high only.** `issue.created` in `createIssue` only when the issue is created with priority high (medium, low and the default send nothing), and `issue.priority_high` in `updateIssue` only when the priority *becomes* high (it was something else before). Moving a card, editing other fields or saving a high issue again send nothing. An issue created as high sends only `issue.created`. (First version alerted on every create; changed after the owner's end-to-end test.)
-- **Body** (the fields asked for plus three): `event`, `label` (ready-to-show text: `🆕 New HIGH issue` / `🔴 Raised to HIGH`), `projectKey`, `number`, `title`, `priority`, `assignee` (display name or `null`), `url` (absolute link to the issue), `sentAt` (ISO time). `event` lets n8n word the message; `sentAt` is inside the signed body so n8n can reject old replays.
+- **Two triggers.** `issue.created` in `createIssue` for every new issue (any priority), and `issue.priority_changed` in `updateIssue` for any real priority change (low, medium or high, either direction) with `previousPriority`. Moving a card, editing other fields or saving the same priority again send nothing. (History: the first version alerted on any create and only on a change *to* high; a second one only on HIGH; the owner then asked for this final rule after the end-to-end test.)
+- **Body** (the fields asked for plus four): `event`, `label` (ready-to-show Thai text: `Issue ใหม่` / `เปลี่ยน priority: MEDIUM → LOW`), `projectKey`, `number`, `title`, `priority`, `previousPriority` (`null` for a new issue), `assignee` (display name or `null`), `url` (absolute link to the issue), `sentAt` (ISO time). `event` lets n8n word the message; `sentAt` is inside the signed body so n8n can reject old replays.
 - **Signature.** `X-Signature: sha256=<hex>`, HMAC-SHA256 of the exact request body with `N8N_WEBHOOK_SECRET`. The body is built once with `JSON.stringify` and that same string is signed and sent. If the URL is set but the secret is not, nothing is sent (never send unsigned) and one warning is logged.
 - **Never in the way.** The call is scheduled with Next's `after()`: it runs after the action has answered, and on Vercel the function is kept alive until it finishes. 3 second timeout (`AbortSignal.timeout`). Every failure (network, timeout, non-2xx, bad config) is caught and logged as one line; the log never contains the URL, the secret or the body. The assignee name lookup also happens inside `after()`.
 - **Unset `N8N_WEBHOOK_URL` = skip silently**, nothing is scheduled. So production keeps working while the author's PC (n8n behind ngrok) is off; alerts only arrive while it is on.
@@ -292,7 +292,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - Only the author's n8n is addressed; there is no retry queue, no delivery log table, no per-project settings (see *Out of scope*).
 
 **Tasks**
-- [x] `src/lib/webhook.ts`: `signBody`, `buildPayload`, `deliverWebhook` (timeout, never throws), `scheduleIssueWebhook` (checks env, `after()`, never throws), `isPriorityRaisedToHigh`.
+- [x] `src/lib/webhook.ts`: `signBody`, `buildPayload`, `deliverWebhook` (timeout, never throws), `scheduleIssueWebhook` (checks env, `after()`, never throws), `hasPriorityChanged`.
 - [x] Call it from `createIssue` and `updateIssue`.
 - [x] `.env.example`: `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `APP_URL` (all optional). README: feature, env table, a section on the n8n side, the ngrok caveat.
 - [x] Unit tests: signature (RFC 4231 test vector), payload round trip through `JSON.parse`/`JSON.stringify` (n8n re-signs the parsed body), skip when unset, no unsigned sends, timeout against a hanging server, non-2xx and network errors swallowed, no secret/URL in logs, the two triggers and their non-triggers.
@@ -304,7 +304,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] With a webhook that hangs, answers 500 or is unreachable: the issue action still succeeds quickly and only one error line is logged (warm timings ~240 ms with a hanging webhook, the same as with none; it would be ~3000 ms if the action waited).
 - [x] `npm run build && npm start` (six servers with different settings): every action answered ok; the only webhook lines in the logs were the expected ones.
 - [x] Owner verified the whole chain end to end: Mini Jira → n8n (through ngrok) → LINE, with a separate Official Account.
-- [x] Global checks pass (tsc, lint, 122 tests, build).
+- [x] Global checks pass (tsc, lint, 121 tests, build).
 
 ---
 

@@ -15,25 +15,25 @@ vi.mock("@/lib/db", () => ({ connectDB: vi.fn() }));
 vi.mock("@/models/User", () => ({ UserModel: { findById: mocks.findById } }));
 
 import {
-  EVENT_LABELS,
   buildPayload,
   deliverWebhook,
-  isPriorityRaisedToHigh,
+  eventLabel,
+  hasPriorityChanged,
   issueUrl,
   resetWebhookWarnings,
   scheduleIssueWebhook,
-  shouldNotifyOnCreate,
   signBody,
   type IssueWebhookPayload,
 } from "@/lib/webhook";
 
 const payload: IssueWebhookPayload = {
   event: "issue.created",
-  label: "🆕 New HIGH issue",
+  label: "Issue ใหม่",
   projectKey: "MJ",
   number: 12,
   title: "Login redirects to a blank page",
   priority: "high",
+  previousPriority: null,
   assignee: "Ann",
   url: "https://app.example.com/projects/MJ/issues/12",
   sentAt: "2026-10-23T08:00:00.000Z",
@@ -56,35 +56,25 @@ describe("signBody", () => {
   });
 });
 
-describe("shouldNotifyOnCreate", () => {
-  it("only a new issue created as high sends an alert", () => {
-    expect(shouldNotifyOnCreate("high")).toBe(true);
-    for (const quiet of ["medium", "low", "", undefined, null, "HIGH", "urgent"]) {
-      expect(shouldNotifyOnCreate(quiet as string | null | undefined)).toBe(false);
+describe("labels", () => {
+  it("a new issue is 'Issue ใหม่'; a change names both priorities in capitals", () => {
+    expect(eventLabel("issue.created", null, "high")).toBe("Issue ใหม่");
+    expect(eventLabel("issue.priority_changed", "medium", "low")).toBe("เปลี่ยน priority: MEDIUM → LOW");
+    expect(eventLabel("issue.priority_changed", "low", "high")).toBe("เปลี่ยน priority: LOW → HIGH");
+    expect(eventLabel("issue.priority_changed", null, "high")).toBe("เปลี่ยน priority: ? → HIGH");
+  });
+});
+
+describe("hasPriorityChanged", () => {
+  it("is true for every real change, in both directions", () => {
+    for (const [from, to] of [["low", "medium"], ["medium", "low"], ["medium", "high"], ["high", "low"], ["low", "high"], ["high", "medium"]]) {
+      expect(hasPriorityChanged(from, to)).toBe(true);
     }
   });
-});
-
-describe("labels", () => {
-  it("each event has ready-to-show wording for n8n", () => {
-    expect(EVENT_LABELS).toEqual({
-      "issue.created": "🆕 New HIGH issue",
-      "issue.priority_high": "🔴 Raised to HIGH",
-    });
-  });
-});
-
-describe("isPriorityRaisedToHigh", () => {
-  it("is true only when the priority becomes high", () => {
-    expect(isPriorityRaisedToHigh("medium", "high")).toBe(true);
-    expect(isPriorityRaisedToHigh("low", "high")).toBe(true);
-    expect(isPriorityRaisedToHigh(undefined, "high")).toBe(true);
-  });
-  it("is false when it was already high, when it is not high, or when no priority is sent", () => {
-    expect(isPriorityRaisedToHigh("high", "high")).toBe(false);
-    expect(isPriorityRaisedToHigh("high", "medium")).toBe(false);
-    expect(isPriorityRaisedToHigh("low", "medium")).toBe(false);
-    expect(isPriorityRaisedToHigh("medium", undefined)).toBe(false);
+  it("is false when the priority is the same or not sent", () => {
+    for (const p of ["low", "medium", "high"]) expect(hasPriorityChanged(p, p)).toBe(false);
+    expect(hasPriorityChanged("medium", undefined)).toBe(false);
+    expect(hasPriorityChanged("medium", null)).toBe(false);
   });
 });
 
@@ -96,22 +86,24 @@ describe("payload", () => {
 
   it("carries the fields n8n needs", () => {
     const built = buildPayload({
-      event: "issue.priority_high",
+      event: "issue.priority_changed",
       projectKey: "MJ",
       number: 7,
       title: "T",
-      priority: "high",
+      priority: "low",
+      previousPriority: "medium",
       assignee: null,
       origin: "https://a.example.com",
       now: new Date("2026-10-23T08:00:00Z"),
     });
     expect(built).toEqual({
-      event: "issue.priority_high",
-      label: "🔴 Raised to HIGH",
+      event: "issue.priority_changed",
+      label: "เปลี่ยน priority: MEDIUM → LOW",
       projectKey: "MJ",
       number: 7,
       title: "T",
-      priority: "high",
+      priority: "low",
+      previousPriority: "medium",
       assignee: null,
       url: "https://a.example.com/projects/MJ/issues/7",
       sentAt: "2026-10-23T08:00:00.000Z",
@@ -301,7 +293,7 @@ describe("scheduleIssueWebhook", () => {
 
   it("sends the payload with the assignee's name, and a link built from APP_URL", async () => {
     const body = await sent({ APP_URL: "https://mini-jira.example.com/" }, "507f1f77bcf86cd799439011");
-    expect(body).toMatchObject({ event: "issue.created", label: "🆕 New HIGH issue", projectKey: "MJ", number: 12, title: "Hello", priority: "medium", assignee: "Ann", url: "https://mini-jira.example.com/projects/MJ/issues/12" });
+    expect(body).toMatchObject({ event: "issue.created", label: "Issue ใหม่", previousPriority: null, projectKey: "MJ", number: 12, title: "Hello", priority: "medium", assignee: "Ann", url: "https://mini-jira.example.com/projects/MJ/issues/12" });
     expect(Number.isNaN(Date.parse(body.sentAt))).toBe(false);
   });
 
