@@ -36,7 +36,7 @@
 - **Fix:** `zinc-600` in light mode and `dark:text-zinc-400` in dark mode for small secondary text. Score is 100 in light/dark, mobile/desktop.
 - **Rule:** Check accessibility in both color schemes. Use `text-zinc-600 dark:text-zinc-400` for secondary text, never bare `text-zinc-500`.
 
-## 2026-10-22 · Keyboard drag sometimes ignores the first arrow press (Phase 5 behavior, found in Phase 7)
+## 2026-10-22 · Keyboard drag sometimes ignores the first arrow press (Phase 5 behavior, found in Phase 7) — RESOLVED 2026-10-23, see the entry at the end
 - **Observation:** with a card lifted by Space, the first arrow press can leave the drop target unchanged (always seen with ArrowRight, sometimes with ArrowDown); the next press moves it. Identical in the Phase 5 and Phase 7 builds, so it comes from dnd-kit's keyboard coordinates with this layout, not from a recent change. Cross-column drop by keyboard works and persists.
 - **Status:** left as is (out of scope for Phase 7). A custom `coordinateGetter` would fix it if it matters in the demo.
 
@@ -136,4 +136,12 @@
 - **GIF without a screen recorder:** `puppeteer-core` + the installed Chrome drives a real drag, takes a screenshot per step, and `gifenc` + `pngjs` encode the frames (about 19 frames at 960x680, ~680 KB). The images and the encoder live outside the repo; only the finished GIF is committed.
 - **Page scrolled in the middle of the clip:** grabbing a card in the bottom 20% of the viewport makes dnd-kit auto-scroll the page the moment the drag starts, so the header slid out of view. Grab the top of the card and use a viewport tall enough for the board.
 - **Privacy:** README images are public. Emails are blacked out; GitHub names and avatars are visible on purpose.
+
+## 2026-10-23 · Keyboard drag: the first ArrowRight went down, not right (root cause found and fixed)
+- **Symptom:** with a card lifted by Space, ArrowRight often seemed to do nothing the first time and worked on the second press. I had written it off as a dnd-kit quirk.
+- **What the data showed:** a temporary wrapper around the `coordinateGetter` logged what dnd-kit sees. The first ArrowRight from the first To do card moved over the card *below it in the same column* (`i:1 -> i:2`), and only the second press reached the next column. The drag overlay's rect was `left 35, top 323` while the card's was `left 36, top 326`.
+- **Root cause:** the drag overlay had `rotate-1` (a tilt) on its first child, and dnd-kit measures the overlay's first child *including transforms*. A 1° tilt grows the bounding box and shifts it by about (-1, -3) px. `sortableKeyboardCoordinates` picks "to the right" with a strict `collisionRect.left < rect.left`, so the card below (left 36 > 35) and, for a column with a single card, the column's own droppable counted as "to the right". ArrowDown, ArrowUp and ArrowLeft passed their strict comparisons by luck, which is why only "right" looked broken.
+- **Fix:** the tilt now sits on an inner element (`<DragOverlay><div><div className="... rotate-1 ...">`), so the measured box is untouched and still looks tilted. Nothing else changed; the diagnostic wrapper was removed again.
+- **Verified in real Chrome (12 cases):** right once and twice, left, down, up, from first / middle / last / only cards, into an empty column, Escape; each checked on the page, after a reload and in the database. The same cases on the old code: 9/12, with exactly the three "right" cases wrong, so the cases do catch the bug.
+- **Rule:** do not put a transform (tilt, scale) on the first child of `DragOverlay`; dnd-kit uses its bounding box for keyboard moves. When something looks like a library quirk, log the library's inputs before accepting it.
 

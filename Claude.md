@@ -17,3 +17,4 @@ When a bug's root cause wasn't obvious, add an entry to LESSONS.md (symptom, roo
 - `/` and `/login` are prerendered, so env vars they read (`AUTH_GOOGLE_*` via `src/lib/providers.ts`) are fixed at build time: redeploy after changing them.
 - The email is the user key (accounts link by it). Never change *which* email is picked for a provider without a migration, and only use emails the provider reports as verified (`isSignInAllowed`, `src/lib/github-profile.ts`).
 - Dark mode is the `dark` class on `<html>` (theme switch, `src/lib/theme.ts`). Write dark styles with `dark:` or `.dark`, never `@media (prefers-color-scheme: dark)`.
+- Never put a transform (tilt, scale) on the first child of `<DragOverlay>`: dnd-kit measures it, transforms included, and the keyboard sensor then moves the wrong way (see LESSONS.md). Tilt an inner element instead.

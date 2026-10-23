@@ -161,13 +161,18 @@ export function Board({
       </div>
       <DragOverlay>
         {active && (
-          <div className={`${cardStyle} rotate-1 shadow-lg`}>
-            <IssueCardView
-              projectKey={projectKey}
-              issue={active}
-              assignee={active.assigneeId ? membersById.get(active.assigneeId) : undefined}
-              interactive={false}
-            />
+          // dnd-kit measures the overlay's first child, transforms included. The tilt therefore lives
+          // one level down: tilting the measured element moves its box by about 1px, and the keyboard
+          // sensor then counts the card below as "to the right" (first arrow press went down, not right).
+          <div>
+            <div className={`${cardStyle} rotate-1 shadow-lg`}>
+              <IssueCardView
+                projectKey={projectKey}
+                issue={active}
+                assignee={active.assigneeId ? membersById.get(active.assigneeId) : undefined}
+                interactive={false}
+              />
+            </div>
           </div>
         )}
       </DragOverlay>

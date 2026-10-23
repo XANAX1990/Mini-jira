@@ -145,7 +145,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] **Rebalance:** if the gap between neighbours is < 0.001, renumber that column to 1000, 2000, 3000… in one `bulkWrite`, then place the card.
 - [x] Optimistic update with `useOptimistic`; roll back and show an error toast if the action fails.
 - [x] Quick "+ Add issue" at the top of the To do column.
-- [x] Keyboard-accessible dragging (dnd-kit keyboard sensor).
+- [x] Keyboard-accessible dragging (dnd-kit keyboard sensor). Follow-up 2026-10-23: the first ArrowRight used to move down instead of right (tilted drag overlay shifted its measured box); fixed and checked with 12 keyboard cases in Chrome.
 
 **Verify**
 - [x] Reorder within a column and move across columns; order survives a hard refresh.
