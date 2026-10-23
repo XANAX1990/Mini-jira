@@ -247,6 +247,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] A Google account with `email_verified: false` is refused (unit tests incl. missing, non-boolean and `"true"`; mutation-checked) and `/login?error=AccessDenied` shows a message. Not exercised end to end: Auth.js turning a `false` from the signIn callback into `?error=AccessDenied` (documented behavior, needs a real unverified Google account).
 - [x] Sign in with Google works on localhost with a real Google account (owner, 2026-10-23).
 - [x] Global checks pass (tsc, lint, 62 tests, build).
+- [x] Production (https://mini-jira-tan.vercel.app, 2026-10-23): both buttons shown after redeploy with `AUTH_GOOGLE_*`; the live Google button reaches Google with the production `redirect_uri` (checked read-only: Google accepts it, a bogus one is refused); the owner signed in with Google, no new errors in the Vercel logs after sign-in, and the same email resolved to the existing user and projects. The Google app is published ("In production"), so no test users are needed.
 
 ---
 
