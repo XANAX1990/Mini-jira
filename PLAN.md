@@ -13,6 +13,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 7: Polish (filters, search, UX states, seed data)
 - [x] Phase 8: Tests, deploy, docs
 - [x] Phase 9: Sign in with Google
+- [ ] Phase 10: Theme switch (Light / Dark / System)
 
 ---
 
@@ -248,6 +249,31 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] Sign in with Google works on localhost with a real Google account (owner, 2026-10-23).
 - [x] Global checks pass (tsc, lint, 62 tests, build).
 - [x] Production (https://mini-jira-tan.vercel.app, 2026-10-23): both buttons shown after redeploy with `AUTH_GOOGLE_*`; the live Google button reaches Google with the production `redirect_uri` (checked read-only: Google accepts it, a bogus one is refused); the owner signed in with Google, no new errors in the Vercel logs after sign-in, and the same email resolved to the existing user and projects. The Google app is published ("In production"), so no test users are needed.
+
+---
+
+## Phase 10: Theme switch
+
+**Goal:** The user can choose Light, Dark or System in the app itself. Today the app only follows the operating system, and the "Theme" setting people find in the Next.js dev tools panel (dev only, not part of the app) changes nothing in it.
+
+**Decisions**
+- **Class-based dark mode.** Tailwind v4's `dark:` variant is redefined once (`@custom-variant dark`) to mean "inside `.dark`", so the 66 existing `dark:` classes keep working untouched. The CSS variables and `color-scheme` (native controls, select popups, scrollbars) follow the same class.
+- **Three choices, stored per browser.** `localStorage` key `theme` holds `light` or `dark`; no value means System (follows the OS live, including when it changes). Nothing is stored on the server or in the database.
+- **No flash.** A tiny inline script in `<head>` sets the class before first paint. `<html>` gets `suppressHydrationWarning` because that script changes its class. The root layout, `/` and `/login` stay static.
+- The switch is three icon buttons (sun, moon, monitor) with `aria-pressed`, in the header and in the top-right corner of `/` and `/login`.
+
+**Tasks**
+- [ ] `src/lib/theme.ts`: `Theme`, `parseTheme`, `resolveTheme`, and the inline script text.
+- [ ] `src/app/globals.css`: `@custom-variant dark`, `:root` light / `.dark` dark variables and `color-scheme`, the select arrow colour under `.dark`.
+- [ ] Root layout: script in `<head>`, `suppressHydrationWarning`.
+- [ ] `ThemeToggle` client component (`useSyncExternalStore`: other tabs and OS changes update it) in the header and on `/` and `/login`.
+- [ ] Unit tests for `parseTheme`, `resolveTheme` and the inline script (run against fake `localStorage` / `matchMedia`). README, LESSONS if anything non-obvious turns up.
+
+**Verify**
+- [ ] `npm run build && npm start`: `/` and `/login` still `○ Static`, no errors in the server log, no hydration warnings in the browser console.
+- [ ] In a real browser: with the OS dark, stored `light` shows light; stored `dark` with the OS light shows dark; nothing stored follows the OS and follows it live when it changes; the choice survives a reload and is picked up by another tab; the class is already right at `DOMContentLoaded` (no flash).
+- [ ] Selects (arrow, option list colours), board, settings and issue pages look right in both themes; Lighthouse accessibility still 100 on `/login` and the board.
+- [ ] Global checks pass.
 
 ---
 
