@@ -131,3 +131,9 @@
 - **Tooling note:** in puppeteer, opening a second tab sends the first one to the background and clicks on it hang until `page.bringToFront()`. My first run hung and was killed by `timeout`.
 - **Rule:** dark-mode CSS uses `dark:` or `.dark`, never `@media (prefers-color-scheme: dark)`.
 
+## 2026-10-23 · README screenshots and the GIF: small gotchas
+- **Dev-tools badge:** screenshots taken from `npm run dev` show the round Next.js "N" at the bottom-left. Crop it out (I cut between two cards) or shoot a `npm run build && npm start` run, which has no badge.
+- **GIF without a screen recorder:** `puppeteer-core` + the installed Chrome drives a real drag, takes a screenshot per step, and `gifenc` + `pngjs` encode the frames (about 19 frames at 960x680, ~680 KB). The images and the encoder live outside the repo; only the finished GIF is committed.
+- **Page scrolled in the middle of the clip:** grabbing a card in the bottom 20% of the viewport makes dnd-kit auto-scroll the page the moment the drag starts, so the header slid out of view. Grab the top of the card and use a viewport tall enough for the board.
+- **Privacy:** README images are public. Emails are blacked out; GitHub names and avatars are visible on purpose.
+

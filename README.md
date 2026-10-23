@@ -10,6 +10,15 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 |---|---|---|
 | ![Board, light theme](docs/screenshots/board.png) | ![Board, dark theme](docs/screenshots/board-dark.png) | ![Board on a phone](docs/screenshots/board-mobile.png) |
 
+### More screens
+
+| | |
+|---|---|
+| ![Sign in with GitHub or Google](docs/screenshots/login.png)<br>**Sign in** with GitHub or Google (same verified email = same account). | ![Issue detail](docs/screenshots/issue-detail.png)<br>**Issue detail**: edit every field; Delete shows for admins only. |
+| ![Members and roles](docs/screenshots/settings-members.png)<br>**Members and roles** (Settings, admins only). The last admin cannot be demoted or removed. | ![Filters in the URL](docs/screenshots/filters.png)<br>**Filters live in the URL**, so a refresh or a shared link shows the same board. |
+| ![Move rolled back with a toast](docs/screenshots/toast-error.png)<br>**A failed move rolls back** and a toast says why (here the issue had just been deleted). | ![No issues match the filters](docs/screenshots/board-filtered-empty.png)<br>**Empty state** when the filters match nothing, with a way out. |
+| ![Project not found](docs/screenshots/not-found.png)<br>**No hint that a project exists**: non-members get the same "not found" page as for a project that does not exist. | |
+
 ---
 
 ## Features
