@@ -227,7 +227,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - Auth.js `Google` provider (OIDC), same JWT sessions and no database adapter. With no adapter there is no `OAuthAccountNotLinked` error: linking is whatever our own code does, so it must be done on purpose.
 - **Link by email.** Reuse the existing upsert by lower-cased email. GitHub and Google with the same email resolve to one `users` document and one `_id`; `Project.members.userId` and `Issue` references keep working untouched. No schema change.
 - **Only verified Google emails.** Reject the sign-in unless the Google profile has `email_verified === true` (an unverified email must never be able to take over someone else's account).
-- Known residual risk (not changed in this phase): Auth.js' GitHub provider picks the *primary* email without checking `verified`. GitHub only lets a verified address be primary, so we rely on that.
+- Known residual risk at the time: Auth.js' GitHub provider picks the *primary* email without checking `verified`. **Closed in a follow-up (2026-10-23)**: `src/lib/github-profile.ts` only returns a verified email (public email unchanged, then primary verified, then any verified).
 - The Google button only shows when `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are set, so deploying the code before the credentials exist cannot leave a broken button.
 - Keep `/` and `/login` static (no session reads in the page; see LESSONS.md). Auth errors go to `/login?error=...` and a small client component shows a message.
 

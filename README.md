@@ -87,7 +87,7 @@ A project must always have at least one admin. The last admin cannot be demoted 
 
 ## Design decisions
 
-- **Accounts are linked by email, so only verified emails count.** There is no database adapter, so Auth.js does no linking of its own: a `users` document is upserted by lower-cased email on every sign-in, whichever provider it came from. Same email through GitHub and Google gives the same `_id`, so memberships and issues follow the person. A Google account is accepted only when `email_verified` is `true`. Auth.js' GitHub provider takes the primary email without checking `verified`; GitHub only lets a verified address be primary, and I rely on that. The name and avatar shown are the ones from the provider used last.
+- **Accounts are linked by email, so only verified emails count.** There is no database adapter, so Auth.js does no linking of its own: a `users` document is upserted by lower-cased email on every sign-in, whichever provider it came from. Same email through GitHub and Google gives the same `_id`, so memberships and issues follow the person. A Google account is accepted only when `email_verified` is `true`. Auth.js' own GitHub provider takes the primary email without checking `verified`, so `src/lib/github-profile.ts` replaces that lookup: a GitHub email is only used when GitHub reports it as verified (the public email is kept as before, since GitHub only lets a verified address be public). The name and avatar shown are the ones from the provider used last.
 - **Roles live on the project, not on the user.** The same person can be an admin in one project and a member in another.
 - **Issue numbers come from an atomic counter.** Creating an issue runs `$inc` on `Project.issueCounter` and uses the returned value. Numbers are never reused after a delete. The unique index catches anything that slips through.
 - **Card order is a float, computed on the server.** A card dropped between two others gets the midpoint of their `order` values, so a move updates **one** document instead of renumbering the column. The client only says which two cards it landed between; the server reads their current values. When the gap gets below 0.001 (after about 20 drops into the same spot), the column is renumbered once in a single `bulkWrite`.
@@ -151,12 +151,13 @@ The same email through GitHub and Google is **one user**: they get the same proj
 
 ## Testing
 
-`npm test` runs 62 unit tests:
+`npm test` runs 72 unit tests:
 
 - `src/lib/order.test.ts`: midpoint, top, bottom and empty column; when a rebalance is needed (exactly after 20 halvings); renumbering in a single `bulkWrite`; 60 cards dropped into the same gap stay in order.
 - `src/lib/permissions.test.ts`: member, admin and non-member for `getMembership`, `requireMember`, `requireAdmin` and the non-throwing variants used by Server Actions.
 - `src/proxy.test.ts`: the signed-in / signed-out redirects with real tokens, on https (cookie `__Secure-authjs.session-token`), on http, and behind a proxy. This is the regression test for a production-only login loop.
 - `src/lib/auth-callbacks.test.ts`: only verified Google emails get in, no email means no sign-in, GitHub and Google with the same email (any casing) look up the same document, an avatar is not blanked by a provider without one, and a lost race on the unique email index is retried.
+- `src/lib/github-profile.test.ts`: the GitHub email lookup only returns verified addresses (primary first), keeps the public email without an extra request, and gives no email when nothing is verified.
 - `src/actions/members.test.ts`: the last-admin guard when demoting and removing, adding by email, issues unassigned when a member is removed.
 
 The database is mocked, so these tests check the logic and the shape of the queries, not MongoDB itself. I checked the real behavior (including two admins demoting each other at the same time, and 60 drops into one gap) against Atlas by hand. There is no browser end-to-end test in the repo.
@@ -220,4 +221,4 @@ docs/screenshots/              # images used in this README
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).

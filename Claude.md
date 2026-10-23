@@ -15,3 +15,4 @@ When a bug's root cause wasn't obvious, add an entry to LESSONS.md (symptom, roo
 - Local `.env.local` uses the database `mini-jira`; production uses `mini-jira-prod`. Never leave `.env.local` pointing at production, and run seed/tests only against local.
 - Mutation-test a new file only after `git add`; restore with `git checkout -- <file>` and re-run the full suite afterwards.
 - `/` and `/login` are prerendered, so env vars they read (`AUTH_GOOGLE_*` via `src/lib/providers.ts`) are fixed at build time: redeploy after changing them.
+- The email is the user key (accounts link by it). Never change *which* email is picked for a provider without a migration, and only use emails the provider reports as verified (`isSignInAllowed`, `src/lib/github-profile.ts`).
