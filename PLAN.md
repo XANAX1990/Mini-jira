@@ -14,7 +14,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 8: Tests, deploy, docs
 - [x] Phase 9: Sign in with Google
 - [x] Phase 10: Theme switch (Light / Dark / System)
-- [ ] Phase 11: Outbound notification to n8n (webhook)
+- [x] Phase 11: Outbound notification to n8n (webhook)
 
 ---
 
@@ -292,18 +292,18 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - Only the author's n8n is addressed; there is no retry queue, no delivery log table, no per-project settings (see *Out of scope*).
 
 **Tasks**
-- [ ] `src/lib/webhook.ts`: `signBody`, `buildPayload`, `deliverWebhook` (timeout, never throws), `scheduleIssueWebhook` (checks env, `after()`, never throws), `isPriorityRaisedToHigh`.
-- [ ] Call it from `createIssue` and `updateIssue`.
-- [ ] `.env.example`: `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `APP_URL` (all optional). README: feature, env table, a section on the n8n side, the ngrok caveat.
-- [ ] Unit tests: signature (RFC 4231 test vector), payload round trip through `JSON.parse`/`JSON.stringify` (n8n re-signs the parsed body), skip when unset, no unsigned sends, timeout against a hanging server, non-2xx and network errors swallowed, no secret/URL in logs, the two triggers and their non-triggers.
-- [ ] Guide for the n8n side: Webhook → verify HMAC (and age) → LINE push message.
+- [x] `src/lib/webhook.ts`: `signBody`, `buildPayload`, `deliverWebhook` (timeout, never throws), `scheduleIssueWebhook` (checks env, `after()`, never throws), `isPriorityRaisedToHigh`.
+- [x] Call it from `createIssue` and `updateIssue`.
+- [x] `.env.example`: `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `APP_URL` (all optional). README: feature, env table, a section on the n8n side, the ngrok caveat.
+- [x] Unit tests: signature (RFC 4231 test vector), payload round trip through `JSON.parse`/`JSON.stringify` (n8n re-signs the parsed body), skip when unset, no unsigned sends, timeout against a hanging server, non-2xx and network errors swallowed, no secret/URL in logs, the two triggers and their non-triggers.
+- [x] Guide for the n8n side: Webhook → verify HMAC (and age) → LINE push message.
 
 **Verify**
-- [ ] A local stand-in for n8n receives a correctly signed request after `createIssue` and after a priority change to high (checked the way the n8n side will check it), and nothing for other edits.
-- [ ] With the webhook unset: no request, no log line, issue actions unchanged.
-- [ ] With a webhook that hangs, answers 500 or is unreachable: the issue action still succeeds quickly and only one error line is logged.
-- [ ] `npm run build && npm start`: server log has no errors from the new code.
-- [ ] Global checks pass.
+- [x] A local stand-in for n8n receives a correctly signed request after `createIssue` and after a priority change to high (checked the way the n8n side will check it: parse, `JSON.stringify` again, HMAC; also over the raw bytes; Thai/emoji/quotes survive), and nothing for other edits. **Not tested: real n8n, ngrok and LINE** (no accounts here); the guide's expressions were run in plain JavaScript on the shape n8n's Webhook node produces.
+- [x] With the webhook unset: no request, no log line, issue actions unchanged.
+- [x] With a webhook that hangs, answers 500 or is unreachable: the issue action still succeeds quickly and only one error line is logged (warm timings ~240 ms with a hanging webhook, the same as with none; it would be ~3000 ms if the action waited).
+- [x] `npm run build && npm start` (six servers with different settings): every action answered ok; the only webhook lines in the logs were the expected ones.
+- [x] Global checks pass (tsc, lint, 119 tests, build).
 
 ---
 

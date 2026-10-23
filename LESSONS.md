@@ -145,3 +145,12 @@
 - **Verified in real Chrome (12 cases):** right once and twice, left, down, up, from first / middle / last / only cards, into an empty column, Escape; each checked on the page, after a reload and in the database. The same cases on the old code: 9/12, with exactly the three "right" cases wrong, so the cases do catch the bug.
 - **Rule:** do not put a transform (tilt, scale) on the first child of `DragOverlay`; dnd-kit uses its bounding box for keyboard moves. When something looks like a library quirk, log the library's inputs before accepting it.
 
+## 2026-10-23 · Phase 11 notes: the n8n webhook
+- **Not blocking, also on Vercel:** a plain "fire and forget" promise can be frozen the moment a serverless action answers. `after()` from `next/server` runs after the response and keeps the function alive until it finishes. Everything slow (the assignee lookup, the POST) is inside it. Measured: ~240 ms per create with a hanging webhook, the same as with none.
+- **`fetch` puts the URL in some error messages**, even a mistyped one without `https://` ("Failed to parse URL from hooks.example.com/webhook/<token>"), and n8n webhook URLs carry a secret in the path. The logger masks the configured URL and secret as well as anything URL-shaped, and logs one line only. A test with a deliberately mistyped URL covers it.
+- **Never send unsigned:** URL set but secret missing means no request and one warning, not a "best effort" unsigned call.
+- **The link in the alert can be forged if built from request headers:** anyone who can call a Server Action can send their own `x-forwarded-host`. The origin comes from `APP_URL`, then Vercel's own `VERCEL_PROJECT_PRODUCTION_URL`, and only as a last resort (local development) from the request.
+- **n8n re-signs a parsed body**, so the signed text must equal `JSON.stringify(JSON.parse(text))`. A test checks this for Thai, emoji, quotes, backslashes, line breaks and U+2028/9.
+- **Test harness gotcha (mine):** Node on Windows resolves `/tmp` to `C:	mp`, not to Git Bash's `/tmp` (the real Temp folder). My first end-to-end run "failed" only because the script read the wrong file; the app had delivered a correct message. Use `os.tmpdir()` in Node scripts and compare by looking at the receiver's own record before blaming the app.
+- **Rule:** work that waits on a third party goes in `after()`, never in the action path; log one line, never the URL, secret or body; unsigned messages are never sent.
+

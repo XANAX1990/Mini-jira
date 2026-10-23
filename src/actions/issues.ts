@@ -8,6 +8,7 @@ import { accessError, authorizeAdmin, authorizeMember } from "@/lib/permissions"
 import { needsRebalance, orderAtEnd, orderBetween, rebalanceColumn } from "@/lib/order";
 import { IssueModel, PRIORITIES, STATUSES, TYPES } from "@/models/Issue";
 import { ProjectModel, type Project } from "@/models/Project";
+import { isPriorityRaisedToHigh, scheduleIssueWebhook } from "@/lib/webhook";
 import type { ActionResult } from "@/actions/projects";
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, "Invalid id");
@@ -85,6 +86,15 @@ export async function createIssue(
     order: await orderAtEnd(project._id, "todo"),
   });
 
+  await scheduleIssueWebhook({
+    event: "issue.created",
+    projectKey: project.key,
+    number: bumped.issueCounter,
+    title: data.title,
+    priority: data.priority ?? "medium",
+    assigneeId: data.assigneeId ?? null,
+  });
+
   refresh(project.key);
   return { ok: true, data: { number: bumped.issueCounter } };
 }
@@ -111,6 +121,7 @@ export async function updateIssue(
   const issue = await IssueModel.findOne({ projectId: project._id, number: num.data });
   if (!issue) return { ok: false, error: "Issue not found" };
 
+  const previousPriority = issue.priority; // the edit form sends every field, so compare before changing
   if (data.title !== undefined) issue.title = data.title;
   if (data.description !== undefined) issue.description = data.description;
   if (data.type !== undefined) issue.type = data.type;
@@ -124,6 +135,17 @@ export async function updateIssue(
     issue.order = await orderAtEnd(project._id, data.status);
   }
   await issue.save();
+
+  if (isPriorityRaisedToHigh(previousPriority, data.priority)) {
+    await scheduleIssueWebhook({
+      event: "issue.priority_high",
+      projectKey: project.key,
+      number: num.data,
+      title: issue.title,
+      priority: "high",
+      assigneeId: issue.assigneeId ? issue.assigneeId.toString() : null,
+    });
+  }
 
   refresh(project.key, num.data);
   return { ok: true, data: undefined };

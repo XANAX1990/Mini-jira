@@ -33,6 +33,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 | Add members by email, change roles, remove members, last-admin guard | ✅ |
 | Filters and title search on the board, kept in the URL | ✅ |
 | Theme switch: Light / Dark / System (remembered in the browser), responsive down to 375 px | ✅ |
+| Optional alert to n8n (→ LINE) when an issue is created or becomes high priority, signed and never blocking | ✅ |
 | Demo data script (`npm run seed`) | ✅ |
 
 ## Tech stack
@@ -102,6 +103,7 @@ A project must always have at least one admin. The last admin cannot be demoted 
 - **Card order is a float, computed on the server.** A card dropped between two others gets the midpoint of their `order` values, so a move updates **one** document instead of renumbering the column. The client only says which two cards it landed between; the server reads their current values. When the gap gets below 0.001 (after about 20 drops into the same spot), the column is renumbered once in a single `bulkWrite`.
 - **The last-admin guard lives inside the database update.** Demoting or removing an admin only matches while another admin exists (`$elemMatch` in the filter of the same `updateOne`), so two admins demoting each other at the same moment cannot leave a project without an admin.
 - **Theme is a class, chosen by the user.** Dark mode is a `dark` class on `<html>` (Tailwind's `dark:` variant is redefined once in `globals.css`), set by a tiny inline script in `<head>` before the first paint and changed by the switch in the header. The choice (`light` / `dark`; nothing stored means *System*, which follows the OS live) lives in `localStorage`, so it is per browser and needs no server round trip. That keeps `/` and `/login` fully static, and `color-scheme` follows the class so native selects and scrollbars match too.
+- **Alerts are fire-and-forget by design.** The webhook is scheduled with `after()` so it can never slow down or fail the issue action; on Vercel the function is kept alive until it finishes. The issue link is built from `APP_URL` or Vercel's own production domain rather than request headers, because anyone who can call a Server Action can send their own `x-forwarded-host`.
 - **Optimistic board.** `useOptimistic` shows the move instantly; if the action fails, the card snaps back and a toast explains why.
 - **Touch dragging uses a handle.** The cards are links inside a sideways-scrolling board, so a finger drags by the handle (`touch-action: none`) and a swipe anywhere else scrolls. Mouse and keyboard grab the whole card (keyboard: focus a card, Space to lift, arrow keys to move, Space to drop, Esc to cancel).
 - **Filters live in the URL** (`?assignee=me&type=bug&q=login`), parsed with Zod on the server, so a refresh or a shared link shows the same board.
@@ -138,6 +140,9 @@ Open http://localhost:3000 and sign in with GitHub. Atlas must allow your IP und
 | `AUTH_GITHUB_SECRET` | GitHub OAuth App client secret |
 | `AUTH_GOOGLE_ID` | Optional. Google OAuth client ID (ends in `.apps.googleusercontent.com`) |
 | `AUTH_GOOGLE_SECRET` | Optional. Google OAuth client secret. The Google button shows only when both Google variables are set. |
+| `N8N_WEBHOOK_URL` | Optional. n8n webhook to notify (see *Alerts to n8n*). Empty = no alerts, nothing logged. |
+| `N8N_WEBHOOK_SECRET` | Optional. Shared secret used to sign the alert (HMAC-SHA256). Required when the URL is set; without it nothing is sent. |
+| `APP_URL` | Optional. Public address used in the issue link of an alert. On Vercel the production domain is used if this is empty. |
 
 Never commit `.env.local`. It is already in `.gitignore`.
 
@@ -148,6 +153,19 @@ Never commit `.env.local`. It is already in `.gitignore`.
 3. Put the client ID and secret in `.env.local` as `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` (and in Vercel for production), then restart the server. The static landing and login pages read these at build time, so on Vercel the new variables need a redeploy.
 
 The same email through GitHub and Google is **one user**: they get the same projects. Google sign-ins are refused unless Google reports the email as verified.
+
+### Alerts to n8n (optional)
+
+When an issue is **created**, or its priority **becomes high**, Mini Jira POSTs a small JSON message to `N8N_WEBHOOK_URL`:
+
+```json
+{ "event": "issue.created", "projectKey": "MJ", "number": 12, "title": "…", "priority": "high",
+  "assignee": "Ann", "url": "https://…/projects/MJ/issues/12", "sentAt": "2026-10-23T08:00:00.000Z" }
+```
+
+The header `X-Signature: sha256=<hex>` is the HMAC-SHA256 of the exact body with `N8N_WEBHOOK_SECRET`. The call runs after the action has answered (Next's `after()`), with a 3 second timeout: a slow, dead or erroring n8n never blocks or fails an issue action, it only logs one line (never the URL, the secret or the body). If `N8N_WEBHOOK_URL` is not set, nothing happens.
+
+My n8n runs on my own machine behind ngrok, so **alerts only arrive while that machine, n8n and ngrok are on**. There are no retries; a message sent while it is off is lost, and the app itself works the same. How to build the n8n side (Webhook, verify the signature, LINE push message): [`docs/n8n-line-alerts.md`](docs/n8n-line-alerts.md).
 
 ### Scripts
 
@@ -161,7 +179,7 @@ The same email through GitHub and Google is **one user**: they get the same proj
 
 ## Testing
 
-`npm test` runs 82 unit tests:
+`npm test` runs 119 unit tests:
 
 - `src/lib/order.test.ts`: midpoint, top, bottom and empty column; when a rebalance is needed (exactly after 20 halvings); renumbering in a single `bulkWrite`; 60 cards dropped into the same gap stay in order.
 - `src/lib/permissions.test.ts`: member, admin and non-member for `getMembership`, `requireMember`, `requireAdmin` and the non-throwing variants used by Server Actions.
@@ -169,6 +187,8 @@ The same email through GitHub and Google is **one user**: they get the same proj
 - `src/lib/auth-callbacks.test.ts`: only verified Google emails get in, no email means no sign-in, GitHub and Google with the same email (any casing) look up the same document, an avatar is not blanked by a provider without one, and a lost race on the unique email index is retried.
 - `src/lib/github-profile.test.ts`: the GitHub email lookup only returns verified addresses (primary first), keeps the public email without an extra request, and gives no email when nothing is verified.
 - `src/lib/theme.test.ts`: which choice wins over the OS, and the inline theme script itself, run against fake `localStorage` / `matchMedia` (stored light or dark, nothing stored, junk values, storage blocked, no `matchMedia`).
+- `src/lib/webhook.test.ts`: the signature (RFC 4231 test vector), that the body survives `JSON.parse` + `JSON.stringify` unchanged (n8n re-signs the parsed body), no request when the URL is unset or the secret is missing, a real local server that never answers (the 3 second timeout, shortened), non-2xx and network errors swallowed, no URL / secret / title in the log, and where the link's address comes from.
+- `src/actions/issues.test.ts`: `createIssue` and `updateIssue` with the real webhook code: one alert on create, one when the priority becomes high, none for any other edit, nothing sent before the action has answered, and a dead webhook or a failing `after()` never fails the action.
 - `src/actions/members.test.ts`: the last-admin guard when demoting and removing, adding by email, issues unassigned when a member is removed.
 
 The database is mocked, so these tests check the logic and the shape of the queries, not MongoDB itself. I checked the real behavior (including two admins demoting each other at the same time, and 60 drops into one gap) against Atlas by hand. There is no browser end-to-end test in the repo.
@@ -212,7 +232,7 @@ src/
 │  └─ api/auth/[...nextauth]/  # Auth.js handlers
 ├─ actions/                    # Server Actions (all writes): auth, projects, issues, members
 ├─ components/                 # UI: board/ (Board, Column, IssueCard, FilterBar), settings/, forms, Toast
-├─ lib/                        # db, auth, permissions, order, queries, board-filters, constants
+├─ lib/                        # db, auth, permissions, order, queries, board-filters, webhook (n8n alerts), constants
 ├─ models/                     # Mongoose schemas: User, Project, Issue
 ├─ proxy.ts                    # Next 16 replacement for middleware
 scripts/seed.ts                # demo data
