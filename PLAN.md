@@ -14,6 +14,7 @@ This file is the source of truth for building Mini Jira. It is written for a cod
 - [x] Phase 8: Tests, deploy, docs
 - [x] Phase 9: Sign in with Google
 - [x] Phase 10: Theme switch (Light / Dark / System)
+- [ ] Phase 11: Outbound notification to n8n (webhook)
 
 ---
 
@@ -277,6 +278,35 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 
 ---
 
+## Phase 11: Outbound notification to n8n
+
+**Goal:** When an issue is created, or its priority is changed to **high**, Mini Jira POSTs a small signed JSON message to an n8n webhook (n8n then sends a LINE message). Mini Jira must keep working exactly as before when the webhook is unset, slow or down.
+
+**Decisions**
+- **Two triggers.** `issue.created` (any priority) in `createIssue`, and `issue.priority_high` in `updateIssue` only when the priority *becomes* high (it was something else before). Moving a card, editing other fields or saving a high issue again send nothing. An issue created as high sends only `issue.created`.
+- **Body** (the fields asked for plus two): `event`, `projectKey`, `number`, `title`, `priority`, `assignee` (display name or `null`), `url` (absolute link to the issue), `sentAt` (ISO time). `event` lets n8n word the message; `sentAt` is inside the signed body so n8n can reject old replays.
+- **Signature.** `X-Signature: sha256=<hex>`, HMAC-SHA256 of the exact request body with `N8N_WEBHOOK_SECRET`. The body is built once with `JSON.stringify` and that same string is signed and sent. If the URL is set but the secret is not, nothing is sent (never send unsigned) and one warning is logged.
+- **Never in the way.** The call is scheduled with Next's `after()`: it runs after the action has answered, and on Vercel the function is kept alive until it finishes. 3 second timeout (`AbortSignal.timeout`). Every failure (network, timeout, non-2xx, bad config) is caught and logged as one line; the log never contains the URL, the secret or the body. The assignee name lookup also happens inside `after()`.
+- **Unset `N8N_WEBHOOK_URL` = skip silently**, nothing is scheduled. So production keeps working while the author's PC (n8n behind ngrok) is off; alerts only arrive while it is on.
+- The link in `url` uses optional `APP_URL` (e.g. the production domain), else the host of the request that created the change.
+- Only the author's n8n is addressed; there is no retry queue, no delivery log table, no per-project settings (see *Out of scope*).
+
+**Tasks**
+- [ ] `src/lib/webhook.ts`: `signBody`, `buildPayload`, `deliverWebhook` (timeout, never throws), `scheduleIssueWebhook` (checks env, `after()`, never throws), `isPriorityRaisedToHigh`.
+- [ ] Call it from `createIssue` and `updateIssue`.
+- [ ] `.env.example`: `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `APP_URL` (all optional). README: feature, env table, a section on the n8n side, the ngrok caveat.
+- [ ] Unit tests: signature (RFC 4231 test vector), payload round trip through `JSON.parse`/`JSON.stringify` (n8n re-signs the parsed body), skip when unset, no unsigned sends, timeout against a hanging server, non-2xx and network errors swallowed, no secret/URL in logs, the two triggers and their non-triggers.
+- [ ] Guide for the n8n side: Webhook → verify HMAC (and age) → LINE push message.
+
+**Verify**
+- [ ] A local stand-in for n8n receives a correctly signed request after `createIssue` and after a priority change to high (checked the way the n8n side will check it), and nothing for other edits.
+- [ ] With the webhook unset: no request, no log line, issue actions unchanged.
+- [ ] With a webhook that hangs, answers 500 or is unreachable: the issue action still succeeds quickly and only one error line is logged.
+- [ ] `npm run build && npm start`: server log has no errors from the new code.
+- [ ] Global checks pass.
+
+---
+
 ## Out of scope / later
 
 - Comments and activity history on issues
@@ -284,4 +314,5 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - Real-time multi-user updates (websockets / change streams)
 - Invite links, email notifications
 - Attachments
+- Webhook delivery history, retries/queue, per-project webhook settings, events other than create / priority-to-high
 - Email/password sign-in
