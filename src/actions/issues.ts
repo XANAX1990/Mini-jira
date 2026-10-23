@@ -8,7 +8,7 @@ import { accessError, authorizeAdmin, authorizeMember } from "@/lib/permissions"
 import { needsRebalance, orderAtEnd, orderBetween, rebalanceColumn } from "@/lib/order";
 import { IssueModel, PRIORITIES, STATUSES, TYPES } from "@/models/Issue";
 import { ProjectModel, type Project } from "@/models/Project";
-import { isPriorityRaisedToHigh, scheduleIssueWebhook } from "@/lib/webhook";
+import { isPriorityRaisedToHigh, scheduleIssueWebhook, shouldNotifyOnCreate } from "@/lib/webhook";
 import type { ActionResult } from "@/actions/projects";
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, "Invalid id");
@@ -86,14 +86,17 @@ export async function createIssue(
     order: await orderAtEnd(project._id, "todo"),
   });
 
-  await scheduleIssueWebhook({
-    event: "issue.created",
-    projectKey: project.key,
-    number: bumped.issueCounter,
-    title: data.title,
-    priority: data.priority ?? "medium",
-    assigneeId: data.assigneeId ?? null,
-  });
+  const priority = data.priority ?? "medium";
+  if (shouldNotifyOnCreate(priority)) {
+    await scheduleIssueWebhook({
+      event: "issue.created",
+      projectKey: project.key,
+      number: bumped.issueCounter,
+      title: data.title,
+      priority,
+      assigneeId: data.assigneeId ?? null,
+    });
+  }
 
   refresh(project.key);
   return { ok: true, data: { number: bumped.issueCounter } };

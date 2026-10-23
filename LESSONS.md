@@ -154,3 +154,11 @@
 - **Test harness gotcha (mine):** Node on Windows resolves `/tmp` to `C:	mp`, not to Git Bash's `/tmp` (the real Temp folder). My first end-to-end run "failed" only because the script read the wrong file; the app had delivered a correct message. Use `os.tmpdir()` in Node scripts and compare by looking at the receiver's own record before blaming the app.
 - **Rule:** work that waits on a third party goes in `after()`, never in the action path; log one line, never the URL, secret or body; unsigned messages are never sent.
 
+## 2026-10-23 · Phase 11 follow-up: first real run of n8n → LINE
+(The owner's request calls this "Phase 10"; it is Phase 11 in this repo because Phase 10 is the theme switch.) These four are from the owner's end-to-end run, not reproduced here.
+- **n8n Save is not Publish.** In current n8n, Save stores the draft in the editor; the production webhook URL runs the *published* version. A fixed workflow kept behaving like the old one until it was published. After every edit: Publish (older versions: the Active switch), then test the production URL.
+- **A Windows console can freeze n8n (QuickEdit).** Clicking inside the console window starts a text selection, and the process is paused until Enter or Esc. Webhooks then time out ("n8n is off") while the process looks alive. Turn QuickEdit off, or do not click in that window.
+- **LINE user IDs are per provider.** The same person has a different `U...` ID under each provider, so a `to` copied from another provider/channel fails with `400`. Take it from *Basic settings* of the channel that sends the push.
+- **A separate Official Account needs its own credential.** Its channel access token is not the old one: make a new Header Auth credential in n8n (`Authorization: Bearer <that token>`) and select it on the HTTP Request node; the old credential gives `401` or sends from the wrong bot.
+- **Also changed:** alerts only for HIGH (created as high, or raised to high), plus a ready-to-show `label` in the payload, so n8n does not translate `event`.
+- **Rule:** after editing an n8n workflow, publish it and re-test the production URL; a LINE push needs the `to` ID and the token from the same channel.

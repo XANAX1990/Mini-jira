@@ -15,18 +15,21 @@ vi.mock("@/lib/db", () => ({ connectDB: vi.fn() }));
 vi.mock("@/models/User", () => ({ UserModel: { findById: mocks.findById } }));
 
 import {
+  EVENT_LABELS,
   buildPayload,
   deliverWebhook,
   isPriorityRaisedToHigh,
   issueUrl,
   resetWebhookWarnings,
   scheduleIssueWebhook,
+  shouldNotifyOnCreate,
   signBody,
   type IssueWebhookPayload,
 } from "@/lib/webhook";
 
 const payload: IssueWebhookPayload = {
   event: "issue.created",
+  label: "🆕 New HIGH issue",
   projectKey: "MJ",
   number: 12,
   title: "Login redirects to a blank page",
@@ -50,6 +53,24 @@ describe("signBody", () => {
   it("changes with the body and with the secret", () => {
     expect(signBody("a", "k")).not.toBe(signBody("b", "k"));
     expect(signBody("a", "k")).not.toBe(signBody("a", "k2"));
+  });
+});
+
+describe("shouldNotifyOnCreate", () => {
+  it("only a new issue created as high sends an alert", () => {
+    expect(shouldNotifyOnCreate("high")).toBe(true);
+    for (const quiet of ["medium", "low", "", undefined, null, "HIGH", "urgent"]) {
+      expect(shouldNotifyOnCreate(quiet as string | null | undefined)).toBe(false);
+    }
+  });
+});
+
+describe("labels", () => {
+  it("each event has ready-to-show wording for n8n", () => {
+    expect(EVENT_LABELS).toEqual({
+      "issue.created": "🆕 New HIGH issue",
+      "issue.priority_high": "🔴 Raised to HIGH",
+    });
   });
 });
 
@@ -86,6 +107,7 @@ describe("payload", () => {
     });
     expect(built).toEqual({
       event: "issue.priority_high",
+      label: "🔴 Raised to HIGH",
       projectKey: "MJ",
       number: 7,
       title: "T",
@@ -279,7 +301,7 @@ describe("scheduleIssueWebhook", () => {
 
   it("sends the payload with the assignee's name, and a link built from APP_URL", async () => {
     const body = await sent({ APP_URL: "https://mini-jira.example.com/" }, "507f1f77bcf86cd799439011");
-    expect(body).toMatchObject({ event: "issue.created", projectKey: "MJ", number: 12, title: "Hello", priority: "medium", assignee: "Ann", url: "https://mini-jira.example.com/projects/MJ/issues/12" });
+    expect(body).toMatchObject({ event: "issue.created", label: "🆕 New HIGH issue", projectKey: "MJ", number: 12, title: "Hello", priority: "medium", assignee: "Ann", url: "https://mini-jira.example.com/projects/MJ/issues/12" });
     expect(Number.isNaN(Date.parse(body.sentAt))).toBe(false);
   });
 

@@ -20,3 +20,4 @@ When a bug's root cause wasn't obvious, add an entry to LESSONS.md (symptom, roo
 - Never put a transform (tilt, scale) on the first child of `<DragOverlay>`: dnd-kit measures it, transforms included, and the keyboard sensor then moves the wrong way (see LESSONS.md). Tilt an inner element instead.
 - Outbound webhooks (`src/lib/webhook.ts`): wait on the third party only inside `after()`, never in the action path; log one line without the URL, secret or body; never send unsigned; build links from `APP_URL` / Vercel's production domain, not request headers.
 - Node scripts that share files with Git Bash use `os.tmpdir()`, not `/tmp` (Node on Windows maps `/tmp` to `C:\tmp`).
+- After editing an n8n workflow, Publish it (Save is only a draft) and re-test the production URL; a LINE push needs the `to` user ID and the channel access token from the same channel/provider (see LESSONS.md).

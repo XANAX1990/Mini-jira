@@ -92,7 +92,7 @@ afterEach(() => {
 
 describe("createIssue and the n8n webhook", () => {
   it("answers first; the webhook is only sent when after() runs, and it carries the new issue", async () => {
-    const res = await createIssue("MJ", { title: "Printer on fire" });
+    const res = await createIssue("MJ", { title: "Printer on fire", priority: "high" });
     expect(res).toEqual({ ok: true, data: { number: 12 } });
     expect(fetchMock).not.toHaveBeenCalled(); // nothing waited for the network
     expect(scheduled).toHaveLength(1);
@@ -101,10 +101,11 @@ describe("createIssue and the n8n webhook", () => {
     expect(sentBodies()).toHaveLength(1);
     expect(sentBodies()[0]).toMatchObject({
       event: "issue.created",
+      label: "🆕 New HIGH issue",
       projectKey: "MJ",
       number: 12,
       title: "Printer on fire",
-      priority: "medium",
+      priority: "high",
       assignee: null,
       url: "https://app.example.com/projects/MJ/issues/12",
     });
@@ -117,26 +118,37 @@ describe("createIssue and the n8n webhook", () => {
     expect(sentBodies()[0]).toMatchObject({ event: "issue.created", priority: "high", assignee: "Ann" });
   });
 
+  it("creating a medium or low issue sends nothing (no default priority either)", async () => {
+    for (const input of [{ title: "Default" }, { title: "Medium", priority: "medium" }, { title: "Low", priority: "low" }]) {
+      const res = await createIssue("MJ", input);
+      expect(res.ok).toBe(true);
+    }
+    await flushAfter();
+    expect(mocks.issueCreate).toHaveBeenCalledTimes(3); // the issues are created...
+    expect(mocks.after).not.toHaveBeenCalled(); // ...and nobody is told
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("sends nothing and schedules nothing when the webhook is not configured", async () => {
     delete process.env.N8N_WEBHOOK_URL;
-    const res = await createIssue("MJ", { title: "Quiet" });
+    const res = await createIssue("MJ", { title: "Quiet", priority: "high" });
     expect(res.ok).toBe(true);
     expect(mocks.after).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("does not notify for a rejected request", async () => {
-    expect((await createIssue("MJ", { title: "   " })).ok).toBe(false);
-    expect((await createIssue("MJ", { title: "x", assigneeId: new Types.ObjectId().toString() })).ok).toBe(false);
+    expect((await createIssue("MJ", { title: "   ", priority: "high" })).ok).toBe(false);
+    expect((await createIssue("MJ", { title: "x", priority: "high", assigneeId: new Types.ObjectId().toString() })).ok).toBe(false);
     mocks.authorizeMember.mockResolvedValue({ ok: false, error: "not_found" });
-    expect((await createIssue("MJ", { title: "x" })).ok).toBe(false);
+    expect((await createIssue("MJ", { title: "x", priority: "high" })).ok).toBe(false);
     expect(scheduled).toHaveLength(0);
   });
 
   it("a dead or slow webhook cannot fail the action, and only logs one line afterwards", async () => {
     fetchMock.mockRejectedValue(new Error("connect ECONNREFUSED 127.0.0.1:5678"));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await createIssue("MJ", { title: "Still created" });
+    const res = await createIssue("MJ", { title: "Still created", priority: "high" });
     expect(res).toEqual({ ok: true, data: { number: 12 } }); // the action is already done...
     expect(spy).not.toHaveBeenCalled();
     await expect(flushAfter()).resolves.toBeUndefined(); // ...and the failed send does not throw
@@ -150,7 +162,7 @@ describe("createIssue and the n8n webhook", () => {
       throw new Error("outside a request scope");
     });
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(await createIssue("MJ", { title: "Created anyway" })).toEqual({ ok: true, data: { number: 12 } });
+    expect(await createIssue("MJ", { title: "Created anyway", priority: "high" })).toEqual({ ok: true, data: { number: 12 } });
     expect(mocks.issueCreate).toHaveBeenCalledTimes(1);
     spy.mockRestore();
   });
@@ -168,7 +180,7 @@ describe("updateIssue and the n8n webhook", () => {
     const { res } = await update({ priority: "high" });
     expect(res.ok).toBe(true);
     expect(sentBodies()).toHaveLength(1);
-    expect(sentBodies()[0]).toMatchObject({ event: "issue.priority_high", projectKey: "MJ", number: 7, title: "Old title", priority: "high", assignee: null, url: "https://app.example.com/projects/MJ/issues/7" });
+    expect(sentBodies()[0]).toMatchObject({ event: "issue.priority_high", label: "🔴 Raised to HIGH", projectKey: "MJ", number: 7, title: "Old title", priority: "high", assignee: null, url: "https://app.example.com/projects/MJ/issues/7" });
   });
 
   it("uses the title and assignee as they are after this edit", async () => {
