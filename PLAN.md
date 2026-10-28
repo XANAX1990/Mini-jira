@@ -325,7 +325,7 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 - [x] Global checks pass (tsc, lint, 125 tests, build).
 
 **Verify**
-- [ ] In a real browser (not run yet): Enter in the title submits, Esc closes, focus starts on the title and returns to the opener, a "+" opens with its column's status, a whitespace-only title shows the server error and keeps the typed text, dark mode and 375px look right, and one create sends one LINE message.
+- [x] Owner tried it in a real browser and reported everything normal (the checks were not reported one by one): Enter in the title submits, Esc closes, focus starts on the title and returns to the opener, a "+" opens with its column's status, a whitespace-only title shows the server error and keeps the typed text, dark mode and 375px look right, and one create sends one LINE message.
 
 ---
 
