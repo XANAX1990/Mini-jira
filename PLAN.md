@@ -308,6 +308,27 @@ Before installing, confirm the Auth.js version supports the installed Next.js 16
 
 ---
 
+## Phase 12: Add-issue modal
+
+**Goal:** Replace the inline "+ Add issue" box (To do column only) with a modal that sets every field at creation.
+
+**Decisions**
+- **Entry points.** An "Add issue" button at the end of the filter row (status To do) and a "+" in every column header (status preset to that column). The old `QuickAdd` component is gone.
+- **Fields.** Title (required), description, status, type, priority (default medium), assignee. Status is a select preset to the column the dialog was opened from.
+- **Server stays the authority.** `createIssue` still runs `authorizeMember` first; its Zod schema gained an optional `status` (default `todo`), and the new issue's `order` is computed for that column. The dialog's input is validated by the same schema as any other caller.
+- **One create, one alert.** The dialog calls `createIssue` once with every chosen field, so `issue.created` carries the chosen priority and no `issue.priority_changed` follows. It never creates first and edits afterwards.
+- **Native `<dialog>` + `showModal()`:** Esc closes, Tab stays inside, the page behind is inert. Focus starts on the title; every way of closing hands focus back to the button that opened it. The form uses `onSubmit` rather than `<form action>`: React 19 clears an action form after it finishes, even when the server rejected it, and the person would lose what they typed. A server error shows inside the dialog and keeps the dialog open.
+
+**Tasks**
+- [x] `status` in the create schema and in the stored issue / `orderAtEnd` call; tests for the dialog's exact payload, the single webhook with the chosen priority, the default, and rejected values (mutation-checked).
+- [x] `src/components/board/AddIssue.tsx`; wired into the filter row and every column; `QuickAdd` removed.
+- [x] Global checks pass (tsc, lint, 125 tests, build).
+
+**Verify**
+- [ ] In a real browser (not run yet): Enter in the title submits, Esc closes, focus starts on the title and returns to the opener, a "+" opens with its column's status, a whitespace-only title shows the server error and keeps the typed text, dark mode and 375px look right, and one create sends one LINE message.
+
+---
+
 ## Out of scope / later
 
 - Comments and activity history on issues

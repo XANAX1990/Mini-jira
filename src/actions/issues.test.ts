@@ -33,6 +33,7 @@ vi.mock("@/models/Issue", async () => ({
 vi.mock("@/models/Project", () => ({ ProjectModel: { findOneAndUpdate: mocks.findOneAndUpdate } }));
 vi.mock("@/models/User", () => ({ UserModel: { findById: mocks.userFindById } }));
 
+import { orderAtEnd } from "@/lib/order";
 import { createIssue, updateIssue } from "@/actions/issues";
 
 const USER = new Types.ObjectId();
@@ -129,6 +130,64 @@ describe("createIssue and the n8n webhook", () => {
       ["issue.created", "medium", "Issue ใหม่"],
       ["issue.created", "low", "Issue ใหม่"],
     ]);
+  });
+
+  it("the add-issue dialog: one create with every chosen field is one issue and one message", async () => {
+    // Exactly what the dialog sends: strings from the form, "" description, null for Unassigned.
+    const res = await createIssue("MJ", {
+      title: "  Login is slow ",
+      description: "Takes 8 seconds",
+      type: "bug",
+      priority: "low",
+      status: "in_progress",
+      assigneeId: ASSIGNEE.toString(),
+    });
+    expect(res).toEqual({ ok: true, data: { number: 12 } });
+    expect(orderAtEnd).toHaveBeenCalledWith(project._id, "in_progress"); // bottom of *that* column
+    expect(mocks.issueCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.issueCreate.mock.calls[0][0]).toMatchObject({
+      title: "Login is slow",
+      description: "Takes 8 seconds",
+      type: "bug",
+      priority: "low",
+      status: "in_progress",
+      assigneeId: ASSIGNEE,
+      reporterId: USER,
+    });
+
+    await flushAfter();
+    expect(sentBodies()).toHaveLength(1); // not created-then-edited, so no priority_changed on top
+    expect(sentBodies()[0]).toMatchObject({
+      event: "issue.created",
+      label: "Issue ใหม่",
+      priority: "low",
+      previousPriority: null,
+      assignee: "Ann",
+      title: "Login is slow",
+    });
+  });
+
+  it("an unassigned issue from the dialog (assigneeId null, empty description) is valid", async () => {
+    const res = await createIssue("MJ", { title: "Plain", description: "", type: "task", priority: "medium", status: "todo", assigneeId: null });
+    expect(res.ok).toBe(true);
+    expect(mocks.issueCreate.mock.calls[0][0]).toMatchObject({ description: "", assigneeId: null, status: "todo" });
+    await flushAfter();
+    expect(sentBodies()[0]).toMatchObject({ assignee: null });
+  });
+
+  it("without a status the issue goes to the To do column, as before", async () => {
+    await createIssue("MJ", { title: "Old caller" });
+    expect(orderAtEnd).toHaveBeenCalledWith(project._id, "todo");
+    expect(mocks.issueCreate.mock.calls[0][0]).toMatchObject({ status: "todo" });
+  });
+
+  it("rejects an unknown status, type or priority, and nothing is created or announced", async () => {
+    for (const bad of [{ status: "archived" }, { type: "epic" }, { priority: "urgent" }, { status: "" }]) {
+      const res = await createIssue("MJ", { title: "Nope", ...bad });
+      expect(res.ok).toBe(false);
+    }
+    expect(mocks.issueCreate).not.toHaveBeenCalled();
+    expect(scheduled).toHaveLength(0);
   });
 
   it("sends nothing and schedules nothing when the webhook is not configured", async () => {

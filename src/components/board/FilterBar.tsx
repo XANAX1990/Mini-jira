@@ -10,7 +10,14 @@ const field =
   "rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
 
 /** Filter state lives in the URL, so it survives a refresh and can be shared. */
-export function FilterBar({ members }: { members: MemberItem[] }) {
+export function FilterBar({
+  members,
+  children,
+}: {
+  members: MemberItem[];
+  /** Sits at the end of the row (the page puts the Add issue button here). */
+  children?: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -122,6 +129,7 @@ export function FilterBar({ members }: { members: MemberItem[] }) {
           Clear filters
         </button>
       )}
+      {children}
     </div>
   );
 }

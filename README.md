@@ -27,7 +27,7 @@ A lightweight issue tracker with a drag-and-drop Kanban board and per-project ro
 |---|---|
 | Sign in with GitHub or Google (Auth.js, JWT sessions); the same verified email is the same user | ✅ |
 | Projects with short keys (e.g. `MJ` → `MJ-1`, `MJ-2`) | ✅ |
-| Issues: create / edit / delete, type, priority, assignee | ✅ |
+| Issues: create (in a dialog opened from "Add issue" or a column's "+") / edit / delete, type, priority, assignee | ✅ |
 | Kanban board with drag & drop (To do / In progress / Done), mouse, touch and keyboard | ✅ |
 | Per-project roles: **Admin** and **Member** | ✅ |
 | Add members by email, change roles, remove members, last-admin guard | ✅ |

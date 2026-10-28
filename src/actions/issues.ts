@@ -29,6 +29,8 @@ const createSchema = z
     type: fields.type.optional(),
     priority: fields.priority.optional(),
     assigneeId: fields.assigneeId.optional(),
+    // The add-issue dialog opens from a column, so the new issue starts in that column.
+    status: fields.status.optional(),
   })
   .strict();
 
@@ -64,6 +66,9 @@ export async function createIssue(
     return { ok: false, error: "Assignee must be a member of the project" };
   }
 
+  const status = data.status ?? "todo";
+  const priority = data.priority ?? "medium";
+
   await connectDB();
   // Atomic counter: two simultaneous creates can never get the same number.
   const bumped = await ProjectModel.findOneAndUpdate(
@@ -79,14 +84,15 @@ export async function createIssue(
     title: data.title,
     description: data.description ?? "",
     type: data.type ?? "task",
-    priority: data.priority ?? "medium",
+    priority,
     assigneeId: data.assigneeId ? new Types.ObjectId(data.assigneeId) : null,
     reporterId: new Types.ObjectId(user.id),
-    status: "todo",
-    order: await orderAtEnd(project._id, "todo"),
+    status,
+    order: await orderAtEnd(project._id, status),
   });
 
-  const priority = data.priority ?? "medium";
+  // One create, one message: the chosen priority travels in this event, so the dialog never
+  // creates first and edits the priority afterwards (that would also send issue.priority_changed).
   await scheduleIssueWebhook({
     event: "issue.created",
     projectKey: project.key,

@@ -155,6 +155,7 @@ export function Board({
             projectKey={projectKey}
             status={status}
             issues={columns[status]}
+            members={members}
             membersById={membersById}
           />
         ))}

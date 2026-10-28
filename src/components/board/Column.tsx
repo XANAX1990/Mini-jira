@@ -4,7 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { STATUS_LABELS } from "@/components/IssueBadges";
 import { IssueCard, cardId } from "@/components/board/IssueCard";
-import { QuickAdd } from "@/components/board/QuickAdd";
+import { AddIssue } from "@/components/board/AddIssue";
 import type { Status } from "@/lib/issue-constants";
 import type { IssueItem, MemberItem } from "@/lib/queries";
 
@@ -14,11 +14,13 @@ export function Column({
   projectKey,
   status,
   issues,
+  members,
   membersById,
 }: {
   projectKey: string;
   status: Status;
   issues: IssueItem[];
+  members: MemberItem[];
   membersById: Map<string, MemberItem>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: columnId(status) });
@@ -28,15 +30,13 @@ export function Column({
       aria-label={STATUS_LABELS[status]}
       className="flex w-[85%] shrink-0 snap-start flex-col rounded-lg bg-zinc-100 p-3 md:w-auto md:min-w-0 md:shrink dark:bg-zinc-950"
     >
-      <h2 className="mb-3 flex items-center justify-between text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {STATUS_LABELS[status]}
-        <span className="rounded-full bg-zinc-200 px-2 text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">{issues.length}</span>
-      </h2>
-      {status === "todo" && (
-        <div className="mb-3">
-          <QuickAdd projectKey={projectKey} />
-        </div>
-      )}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          {STATUS_LABELS[status]}
+          <span className="rounded-full bg-zinc-200 px-2 text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">{issues.length}</span>
+        </h2>
+        <AddIssue projectKey={projectKey} members={members} status={status} variant="icon" />
+      </div>
       <SortableContext items={issues.map((i) => cardId(i.number))} strategy={verticalListSortingStrategy}>
         <div
           ref={setNodeRef}
