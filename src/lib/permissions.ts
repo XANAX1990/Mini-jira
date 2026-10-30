@@ -5,8 +5,15 @@ import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ProjectModel, type Role } from "@/models/Project";
 
+// Project keys are 2-6 letters (createProjectSchema). Server Actions receive their arguments from
+// the client at run time, whatever the TypeScript type says, so a key that is not a plain string of
+// that shape is simply "no such project": it never reaches a Mongo filter, and it answers a clean
+// 404 instead of a server error (SECURITY.md: filters are built from validated primitives only).
+const PROJECT_KEY = /^[A-Za-z]{2,6}$/;
+
 // cache(): layout and page both ask for the membership in one request.
 export const getMembership = cache(async (projectKey: string, userId: string) => {
+  if (typeof projectKey !== "string" || !PROJECT_KEY.test(projectKey)) return null;
   if (!Types.ObjectId.isValid(userId)) return null;
   await connectDB();
   const project = await ProjectModel.findOne({

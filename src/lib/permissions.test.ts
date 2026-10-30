@@ -134,3 +134,58 @@ describe("authorizeMember / authorizeAdmin (for Server Actions, never throw)", (
     expect(accessError("not_found")).toEqual({ ok: false, error: "Project not found" });
   });
 });
+
+describe("project key from the client is checked before it is used", () => {
+  // What a hand-made Server Action call could send instead of a string.
+  const hostile = [
+    { $ne: "" },
+    { $gt: "" },
+    { $regex: ".*" },
+    ["MJ"],
+    12,
+    true,
+    null,
+    undefined,
+    {},
+  ] as unknown as string[];
+
+  it.each(hostile)("getMembership(%j) is null and never reaches the database", async (key) => {
+    signInAs(ADMIN);
+    expect(await getMembership(key, ADMIN.toString())).toBeNull();
+    expect(mocks.findOne).not.toHaveBeenCalled();
+  });
+
+  it.each(["", "M", "ABCDEFG", "M1", "MJ1", "M-J", "M J", " MJ", "MJ ", "MJ\n", "M$", "M.", "ÅB", "มจ"])(
+    "getMembership(%j) is null: keys are 2-6 letters",
+    async (key) => {
+      signInAs(ADMIN);
+      expect(await getMembership(key, ADMIN.toString())).toBeNull();
+      expect(mocks.findOne).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(["MJ", "mj", "Mj", "ABCDEF", "abcdef"])("%s is still accepted", async (key) => {
+    signInAs(ADMIN);
+    await getMembership(key, ADMIN.toString());
+    expect(mocks.findOne).toHaveBeenCalledWith({ key: key.toUpperCase(), "members.userId": ADMIN });
+  });
+
+  it("a Server Action with a bad key answers a clean 'Project not found', not a server error", async () => {
+    signInAs(ADMIN);
+    const bad = { $ne: "" } as unknown as string;
+    expect(await authorizeMember(bad)).toEqual({ ok: false, error: "not_found" });
+    expect(await authorizeAdmin(bad)).toEqual({ ok: false, error: "not_found" });
+  });
+
+  it("a page with a bad key is a 404", async () => {
+    signInAs(ADMIN);
+    await expect(requireMember("%7B%24ne%7D")).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(requireAdmin("not a key")).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("the user must still be signed in first (a bad key does not skip authentication)", async () => {
+    signInAs(ADMIN);
+    await authorizeMember("!!");
+    expect(mocks.requireUser).toHaveBeenCalledTimes(1);
+  });
+});
