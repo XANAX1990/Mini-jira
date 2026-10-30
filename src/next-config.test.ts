@@ -14,6 +14,7 @@ describe("security headers (SECURITY.md: Infrastructure)", () => {
     expect(h["X-Frame-Options"]).toBe("DENY");
     expect(h["X-Content-Type-Options"]).toBe("nosniff");
     expect(h["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
+    expect(h["Permissions-Policy"]).toBe("camera=(), microphone=(), geolocation=()");
   });
 
   it("does not turn on a script policy that could break Auth.js or the theme script", async () => {

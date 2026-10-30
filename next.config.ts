@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" }, // older browsers; CSP above is the modern form
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
       // Protected pages must not be stored by the browser (bfcache / Back button).
